@@ -116,3 +116,9 @@ DoubleVal KnuthVarianceFinalize(FunctionContext* ctx, const StringVal& src) {
   return DoubleVal(variance);
 }
 
+DoubleVal StdDevFinalize(FunctionContext* ctx, const StringVal& src) {
+  DoubleVal variance = KnuthVarianceFinalize(ctx, src);
+  if (variance.is_null) return variance;
+  return DoubleVal(sqrt(variance.val));
+}
+

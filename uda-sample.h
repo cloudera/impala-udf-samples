@@ -54,4 +54,8 @@ void KnuthVarianceUpdate(FunctionContext* context, const DoubleVal& input, Strin
 void KnuthVarianceMerge(FunctionContext* context, const StringVal& src, StringVal* dst);
 DoubleVal KnuthVarianceFinalize(FunctionContext* context, const StringVal& val);
 
+// The different steps of the UDA are composable. In this case, we'll the UDA will
+// use the other steps from the variance computation.
+DoubleVal StdDevFinalize(FunctionContext* context, const StringVal& val);
+
 #endif

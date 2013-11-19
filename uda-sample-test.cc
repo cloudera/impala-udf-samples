@@ -91,8 +91,10 @@ bool TestStringConcat() {
 
 // For algorithms that work on floating point values, the results might not match
 // exactly due to floating point inprecision. The test harness allows passing a
-// custom equality compartor. Here's an example of one that can tolerate some small
+// custom equality comparator. Here's an example of one that can tolerate some small
 // error.
+// This is particularly true  for distributed execution since the order the values
+// are processed is variable.
 bool FuzzyCompare(const DoubleVal& x, const DoubleVal& y) {
   if (x.is_null && y.is_null) return true;
   if (x.is_null || y.is_null) return false;
@@ -100,6 +102,7 @@ bool FuzzyCompare(const DoubleVal& x, const DoubleVal& y) {
 }
 
 bool TestVariance() {
+  // Setup the test UDAs.
   UdaTestHarness<DoubleVal, StringVal, DoubleVal> simple_variance(
       VarianceInit, VarianceUpdate, VarianceMerge, NULL, VarianceFinalize);
   simple_variance.SetResultComparator(FuzzyCompare);
@@ -109,6 +112,12 @@ bool TestVariance() {
       KnuthVarianceFinalize);
   knuth_variance.SetResultComparator(FuzzyCompare);
 
+  UdaTestHarness<DoubleVal, StringVal, DoubleVal> stddev(
+      KnuthVarianceInit, KnuthVarianceUpdate, KnuthVarianceMerge, NULL,
+      StdDevFinalize);
+  stddev.SetResultComparator(FuzzyCompare);
+
+  // Initialize the test values.
   vector<DoubleVal> vals;
   double sum = 0;
   for (int i = 0; i < 1001; ++i) {
@@ -122,13 +131,19 @@ bool TestVariance() {
     expected_variance += d * d;
   }
   expected_variance /= (vals.size() - 1);
+  double expected_stddev = sqrt(expected_variance);
 
+  // Run the tests
   if (!simple_variance.Execute(vals, DoubleVal(expected_variance))) {
     cerr << "Simple variance: " << simple_variance.GetErrorMsg() << endl;
     return false;
   }
   if (!knuth_variance.Execute(vals, DoubleVal(expected_variance))) {
     cerr << "Knuth variance: " << knuth_variance.GetErrorMsg() << endl;
+    return false;
+  }
+  if (!stddev.Execute(vals, DoubleVal(expected_stddev))) {
+    cerr << "Stddev: " << stddev.GetErrorMsg() << endl;
     return false;
   }
 
