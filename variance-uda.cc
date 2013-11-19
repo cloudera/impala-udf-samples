@@ -19,9 +19,16 @@
 #include <iostream>
 #include <impala_udf/udf.h>
 
+#include "uda-sample.h"
+
 using namespace std;
 using namespace impala_udf;
 
+// An implementation of a simple single pass variance algorithm. A standard UDA must
+// be single pass (i.e. does not scan the table more than once), so the most canonical
+// two pass approach is not practical.
+// This algorithms suffers from numerical precision issues if the input values are
+// large due to floating point rounding.
 struct VarianceState {
   // Sum of all input values.
   double sum;
@@ -56,9 +63,56 @@ void VarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
 
 DoubleVal VarianceFinalize(FunctionContext* ctx, const StringVal& src) {
   VarianceState* state = reinterpret_cast<VarianceState*>(src.ptr);
-  if (state->count == 0) return DoubleVal::null();
+  if (state->count == 0 || state->count == 1) return DoubleVal::null();
   double mean = state->sum / state->count;
-  double variance = state->sum_squared / state->count - mean * mean;
+  double variance =
+      (state->sum_squared - state->sum * state->sum / state->count) / (state->count - 1);
+  return DoubleVal(variance);
+}
+
+// An implementation of the Knuth online variance algorithm, which is also single pass
+// and more numerically stable.
+struct KnuthVarianceState {
+  int64_t count;
+  double mean;
+  double m2;
+};
+
+void KnuthVarianceInit(FunctionContext* ctx, StringVal* dst) {
+  dst->is_null = false;
+  dst->len = sizeof(KnuthVarianceState);
+  dst->ptr = ctx->Allocate(dst->len);
+  memset(dst->ptr, 0, dst->len);
+}
+
+void KnuthVarianceUpdate(FunctionContext* ctx, const DoubleVal& src, StringVal* dst) {
+  if (src.is_null) return;
+  KnuthVarianceState* state = reinterpret_cast<KnuthVarianceState*>(dst->ptr);
+  double temp = 1 + state->count;
+  double delta = src.val - state->mean;
+  double r = delta / temp;
+  state->mean += r;
+  state->m2 += state->count * delta * r;
+  state->count = temp;
+}
+
+void KnuthVarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
+  KnuthVarianceState* src_state = reinterpret_cast<KnuthVarianceState*>(src.ptr);
+  KnuthVarianceState* dst_state = reinterpret_cast<KnuthVarianceState*>(dst->ptr);
+  if (src_state->count == 0) return;
+  double delta = dst_state->mean - src_state->mean;
+  double sum_count = dst_state->count + src_state->count;
+  dst_state->mean = src_state->mean + delta * (dst_state->count / sum_count);
+  dst_state->m2 = (src_state->m2) + dst_state->m2 +
+      (delta * delta) * (src_state->count * dst_state->count / sum_count);
+  dst_state->count = sum_count;
+}
+
+DoubleVal KnuthVarianceFinalize(FunctionContext* ctx, const StringVal& src) {
+  KnuthVarianceState* state = reinterpret_cast<KnuthVarianceState*>(src.ptr);
+  if (state->count == 0 || state->count == 1) return DoubleVal::null();
+  double variance_n = state->m2 / state->count;
+  double variance = variance_n * state->count / (state->count - 1);
   return DoubleVal(variance);
 }
 

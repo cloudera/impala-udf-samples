@@ -43,4 +43,15 @@ void StringConcatUpdate(FunctionContext* context, const StringVal& arg1,
 void StringConcatMerge(FunctionContext* context, const StringVal& src, StringVal* dst);
 StringVal StringConcatFinalize(FunctionContext* context, const StringVal& val);
 
+// This is a example of the variance aggregate function.
+void VarianceInit(FunctionContext* context, StringVal* val);
+void VarianceUpdate(FunctionContext* context, const DoubleVal& input, StringVal* val);
+void VarianceMerge(FunctionContext* context, const StringVal& src, StringVal* dst);
+DoubleVal VarianceFinalize(FunctionContext* context, const StringVal& val);
+
+void KnuthVarianceInit(FunctionContext* context, StringVal* val);
+void KnuthVarianceUpdate(FunctionContext* context, const DoubleVal& input, StringVal* val);
+void KnuthVarianceMerge(FunctionContext* context, const StringVal& src, StringVal* dst);
+DoubleVal KnuthVarianceFinalize(FunctionContext* context, const StringVal& val);
+
 #endif
