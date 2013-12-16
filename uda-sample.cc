@@ -14,8 +14,26 @@
 
 #include "uda-sample.h"
 #include <assert.h>
+#include <sstream>
 
 using namespace impala_udf;
+using namespace std;
+
+template <typename T>
+StringVal ToStringVal(FunctionContext* context, const T& val) {
+  stringstream ss;
+  ss << val;
+  string str = ss.str();
+  StringVal string_val(context, str.size());
+  memcpy(string_val.ptr, str.c_str(), str.size());
+  return string_val;
+}
+
+template <>
+StringVal ToStringVal<DoubleVal>(FunctionContext* context, const DoubleVal& val) {
+  if (val.is_null) return StringVal::null();
+  return ToStringVal(context, val.val);
+}
 
 // ---------------------------------------------------------------------------
 // This is a sample of implementing a COUNT aggregate function.
@@ -46,30 +64,37 @@ struct AvgStruct {
   int64_t count;
 };
 
-void AvgInit(FunctionContext* context, BufferVal* val) {
-  assert(sizeof(AvgStruct) == 16);
-  memset(*val, 0, sizeof(AvgStruct));
+// Initialize the StringVal intermediate to a zero'd AvgStruct
+void AvgInit(FunctionContext* context, StringVal* val) {
+  val->is_null = false;
+  val->len = sizeof(AvgStruct);
+  val->ptr = context->Allocate(val->len);
+  memset(val->ptr, 0, val->len);
 }
 
-void AvgUpdate(FunctionContext* context, const DoubleVal& input, BufferVal* val) {
+void AvgUpdate(FunctionContext* context, const DoubleVal& input, StringVal* val) {
   if (input.is_null) return;
-  AvgStruct* avg = reinterpret_cast<AvgStruct*>(*val);
+  assert(!val->is_null);
+  assert(val->len == sizeof(AvgStruct));
+  AvgStruct* avg = reinterpret_cast<AvgStruct*>(val->ptr);
   avg->sum += input.val;
   ++avg->count;
 }
 
-void AvgMerge(FunctionContext* context, const BufferVal& src, BufferVal* dst) {
-  if (src == NULL) return;
-  const AvgStruct* src_struct = reinterpret_cast<const AvgStruct*>(src);
-  AvgStruct* dst_struct = reinterpret_cast<AvgStruct*>(*dst);
-  dst_struct->sum += src_struct->sum;
-  dst_struct->count += src_struct->count;
+void AvgMerge(FunctionContext* context, const StringVal& src, StringVal* dst) {
+  if (src.is_null) return;
+  const AvgStruct* src_avg = reinterpret_cast<const AvgStruct*>(src.ptr);
+  AvgStruct* dst_avg = reinterpret_cast<AvgStruct*>(dst->ptr);
+  dst_avg->sum += src_avg->sum;
+  dst_avg->count += src_avg->count;
 }
 
-DoubleVal AvgFinalize(FunctionContext* context, const BufferVal& val) {
-  if (val == NULL) return DoubleVal::null();
-  AvgStruct* val_struct = reinterpret_cast<AvgStruct*>(val);
-  return DoubleVal(val_struct->sum / val_struct->count);
+StringVal AvgFinalize(FunctionContext* context, const StringVal& val) {
+  assert(!val.is_null);
+  assert(val.len == sizeof(AvgStruct));
+  AvgStruct* avg = reinterpret_cast<AvgStruct*>(val.ptr);
+  if (avg->count == 0) return StringVal::null();
+  return ToStringVal(context, avg->sum / avg->count);
 }
 
 // ---------------------------------------------------------------------------
