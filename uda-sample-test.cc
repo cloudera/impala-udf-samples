@@ -27,6 +27,13 @@ bool TestCount() {
   UdaTestHarness<BigIntVal, BigIntVal, IntVal> test(
       CountInit, CountUpdate, CountMerge, NULL, CountFinalize);
 
+  // Run the UDA over empty input
+  vector<IntVal> empty;
+  if (!test.Execute(empty, BigIntVal(0))) {
+    cerr << test.GetErrorMsg() << endl;
+    return false;
+  }
+
   // Run the UDA over 10000 non-null values
   vector<IntVal> no_nulls;
   no_nulls.resize(10000);
@@ -52,15 +59,23 @@ bool TestCount() {
 }
 
 bool TestAvg() {
-  UdaTestHarness<DoubleVal, BufferVal, DoubleVal> test(
+  UdaTestHarness<StringVal, StringVal, DoubleVal> test(
       AvgInit, AvgUpdate, AvgMerge, NULL, AvgFinalize);
   test.SetIntermediateSize(16);
 
   vector<DoubleVal> vals;
+
+  // Test empty input
+  if (!test.Execute<DoubleVal>(vals, StringVal::null())) {
+    cerr << test.GetErrorMsg() << endl;
+    return false;
+  }
+
+  // Test values
   for (int i = 0; i < 1001; ++i) {
     vals.push_back(DoubleVal(i));
   }
-  if (!test.Execute<DoubleVal>(vals, DoubleVal(500))) {
+  if (!test.Execute<DoubleVal>(vals, StringVal("500"))) {
     cerr << test.GetErrorMsg() << endl;
     return false;
   }
@@ -74,10 +89,18 @@ bool TestStringConcat() {
       StringConcatFinalize);
 
   vector<StringVal> values;
+  vector<StringVal> separators;
+
+  // Test empty input
+  if (!test.Execute(values, separators, StringVal::null())) {
+    cerr << test.GetErrorMsg() << endl;
+    return false;
+  }
+
+  // Test values
   values.push_back("Hello");
   values.push_back("World");
 
-  vector<StringVal> separators;
   for(int i = 0; i < values.size(); ++i) {
     separators.push_back(",");
   }
@@ -101,24 +124,51 @@ bool FuzzyCompare(const DoubleVal& x, const DoubleVal& y) {
   return fabs(x.val - y.val) < 0.00001;
 }
 
+// Reimplementation of FuzzyCompare that parses doubles encoded as StringVals.
+// TODO: This can be removed when separate intermediate types are supported in Impala 2.0
+bool FuzzyCompareStrings(const StringVal& x, const StringVal& y) {
+  if (x.is_null && y.is_null) return true;
+  if (x.is_null || y.is_null) return false;
+  // Note that atof expects null-terminated strings, which is not guaranteed by
+  // StringVals. However, since our UDAs serialize double to StringVals via stringstream,
+  // we know the serialized StringVals will be null-terminated in this case.
+  double x_val = atof(reinterpret_cast<char*>(x.ptr));
+  double y_val = atof(reinterpret_cast<char*>(y.ptr));
+  return fabs(x_val - y_val) < 0.00001;
+}
+
 bool TestVariance() {
   // Setup the test UDAs.
-  UdaTestHarness<DoubleVal, StringVal, DoubleVal> simple_variance(
+  UdaTestHarness<StringVal, StringVal, DoubleVal> simple_variance(
       VarianceInit, VarianceUpdate, VarianceMerge, NULL, VarianceFinalize);
-  simple_variance.SetResultComparator(FuzzyCompare);
+  simple_variance.SetResultComparator(FuzzyCompareStrings);
 
-  UdaTestHarness<DoubleVal, StringVal, DoubleVal> knuth_variance(
+  UdaTestHarness<StringVal, StringVal, DoubleVal> knuth_variance(
       KnuthVarianceInit, KnuthVarianceUpdate, KnuthVarianceMerge, NULL,
       KnuthVarianceFinalize);
-  knuth_variance.SetResultComparator(FuzzyCompare);
+  knuth_variance.SetResultComparator(FuzzyCompareStrings);
 
-  UdaTestHarness<DoubleVal, StringVal, DoubleVal> stddev(
+  UdaTestHarness<StringVal, StringVal, DoubleVal> stddev(
       KnuthVarianceInit, KnuthVarianceUpdate, KnuthVarianceMerge, NULL,
       StdDevFinalize);
-  stddev.SetResultComparator(FuzzyCompare);
+  stddev.SetResultComparator(FuzzyCompareStrings);
+
+  // Test empty input
+  vector<DoubleVal> vals;
+  if (!simple_variance.Execute(vals, StringVal::null())) {
+    cerr << "Simple variance: " << simple_variance.GetErrorMsg() << endl;
+    return false;
+  }
+  if (!knuth_variance.Execute(vals, StringVal::null())) {
+    cerr << "Knuth variance: " << knuth_variance.GetErrorMsg() << endl;
+    return false;
+  }
+  if (!stddev.Execute(vals, StringVal::null())) {
+    cerr << "Stddev: " << stddev.GetErrorMsg() << endl;
+    return false;
+  }
 
   // Initialize the test values.
-  vector<DoubleVal> vals;
   double sum = 0;
   for (int i = 0; i < 1001; ++i) {
     vals.push_back(DoubleVal(i));
@@ -133,16 +183,26 @@ bool TestVariance() {
   expected_variance /= (vals.size() - 1);
   double expected_stddev = sqrt(expected_variance);
 
+  stringstream expected_variance_ss;
+  expected_variance_ss << expected_variance;
+  string expected_variance_str = expected_variance_ss.str();
+  StringVal expected_variance_sv(expected_variance_str.c_str());
+
+  stringstream expected_stddev_ss;
+  expected_stddev_ss << expected_stddev;
+  string expected_stddev_str = expected_stddev_ss.str();
+  StringVal expected_stddev_sv(expected_stddev_str.c_str());
+
   // Run the tests
-  if (!simple_variance.Execute(vals, DoubleVal(expected_variance))) {
+  if (!simple_variance.Execute(vals, expected_variance_sv)) {
     cerr << "Simple variance: " << simple_variance.GetErrorMsg() << endl;
     return false;
   }
-  if (!knuth_variance.Execute(vals, DoubleVal(expected_variance))) {
+  if (!knuth_variance.Execute(vals, expected_variance_sv)) {
     cerr << "Knuth variance: " << knuth_variance.GetErrorMsg() << endl;
     return false;
   }
-  if (!stddev.Execute(vals, DoubleVal(expected_stddev))) {
+  if (!stddev.Execute(vals, expected_stddev_sv)) {
     cerr << "Stddev: " << stddev.GetErrorMsg() << endl;
     return false;
   }
