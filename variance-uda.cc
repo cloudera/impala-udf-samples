@@ -61,17 +61,15 @@ void VarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
   dst_state->count += src_state->count;
 }
 
-DoubleVal VarianceFinalize(FunctionContext* ctx, const StringVal& src) {
+StringVal VarianceFinalize(FunctionContext* ctx, const StringVal& src) {
   VarianceState* state = reinterpret_cast<VarianceState*>(src.ptr);
-  if (state->count == 0 || state->count == 1) return DoubleVal::null();
+  if (state->count == 0 || state->count == 1) return StringVal::null();
   double mean = state->sum / state->count;
   double variance =
       (state->sum_squared - state->sum * state->sum / state->count) / (state->count - 1);
-  return DoubleVal(variance);
+  return ToStringVal(ctx, variance);
 }
 
-// An implementation of the Knuth online variance algorithm, which is also single pass
-// and more numerically stable.
 struct KnuthVarianceState {
   int64_t count;
   double mean;
@@ -108,17 +106,23 @@ void KnuthVarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* d
   dst_state->count = sum_count;
 }
 
-DoubleVal KnuthVarianceFinalize(FunctionContext* ctx, const StringVal& src) {
-  KnuthVarianceState* state = reinterpret_cast<KnuthVarianceState*>(src.ptr);
+// TODO: this can be used as the actual variance finalize function once the return type
+// doesn't need to match the intermediate type in Impala 2.0.
+DoubleVal KnuthVarianceFinalize(const StringVal& state_sv) {
+  KnuthVarianceState* state = reinterpret_cast<KnuthVarianceState*>(state_sv.ptr);
   if (state->count == 0 || state->count == 1) return DoubleVal::null();
   double variance_n = state->m2 / state->count;
   double variance = variance_n * state->count / (state->count - 1);
   return DoubleVal(variance);
 }
 
-DoubleVal StdDevFinalize(FunctionContext* ctx, const StringVal& src) {
-  DoubleVal variance = KnuthVarianceFinalize(ctx, src);
-  if (variance.is_null) return variance;
-  return DoubleVal(sqrt(variance.val));
+StringVal KnuthVarianceFinalize(FunctionContext* ctx, const StringVal& src) {
+  return ToStringVal(ctx, KnuthVarianceFinalize(src));
+}
+
+StringVal StdDevFinalize(FunctionContext* ctx, const StringVal& src) {
+  DoubleVal variance = KnuthVarianceFinalize(src);
+  if (variance.is_null) return StringVal::null();
+  return ToStringVal(ctx, sqrt(variance.val));
 }
 
