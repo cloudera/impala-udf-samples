@@ -20,6 +20,15 @@
 
 using namespace impala_udf;
 
+// Usage: > create function add(int, int) returns int
+//          location '/user/cloudera/libudfsample.so' SYMBOL='AddUdf';
+//        > select add(1, 2);
 IntVal AddUdf(FunctionContext* context, const IntVal& arg1, const IntVal& arg2);
+
+// Returns true if x is approximately equal to y.
+// Usage: > create function fuzzy_equals(double, double) returns boolean
+//          location '/user/cloudera/libudfsample.so' SYMBOL='FuzzyEquals';
+//        > select fuzzy_equals(1, 1.00000001);
+BooleanVal FuzzyEquals(FunctionContext* context, const DoubleVal& x, const DoubleVal& y);
 
 #endif
