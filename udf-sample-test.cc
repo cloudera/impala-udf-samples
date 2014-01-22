@@ -32,6 +32,12 @@ int main(int argc, char** argv) {
   passed &= UdfTestHarness::ValidateUdf<IntVal, IntVal, IntVal>(
       AddUdf, IntVal::null(), IntVal(2), IntVal::null());
 
+  // Test FuzzyEquals sample.
+  passed &= UdfTestHarness::ValidateUdf<BooleanVal, DoubleVal, DoubleVal>(
+      FuzzyEquals, DoubleVal(1.0), DoubleVal(1.0000000001), BooleanVal(true));
+  passed &= UdfTestHarness::ValidateUdf<BooleanVal, DoubleVal, DoubleVal>(
+      FuzzyEquals, DoubleVal(1.1), DoubleVal(1.0), BooleanVal(false));
+
   cout << "Tests " << (passed ? "Passed." : "Failed.") << endl;
   return !passed;
 }

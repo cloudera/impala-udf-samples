@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "udf-sample.h"
+#include <math.h>
 
 // In this sample we are declaring a UDF that adds two ints and returns an int.
 IntVal AddUdf(FunctionContext* context, const IntVal& arg1, const IntVal& arg2) {
@@ -21,4 +22,12 @@ IntVal AddUdf(FunctionContext* context, const IntVal& arg1, const IntVal& arg2) 
 }
 
 // Multiple UDFs can be defined in the same file
+
+BooleanVal FuzzyEquals(FunctionContext* ctx, const DoubleVal& x, const DoubleVal& y) {
+  const double EPSILON = 0.000001f;
+  if (x.is_null || y.is_null) return BooleanVal::null();
+  double delta = fabs(x.val - y.val);
+  return BooleanVal(delta < EPSILON);
+}
+
 
