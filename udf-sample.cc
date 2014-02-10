@@ -85,9 +85,10 @@ StringVal StripVowels(FunctionContext* context, const StringVal& arg1) {
         shorter.append(1, (char)c);
     }
   }
-  // The modified string is stored in 'shorter', which is destroyed when this function ends. We need to make a string val
-  // and copy the contents.
-  StringVal result(context, shorter.size()); // Only the version of the ctor that takes a context object allocates new memory
+  // The modified string is stored in 'shorter', which is destroyed when this function
+  // ends. We need to make a string val and copy the contents.
+  // NB: Only the version of the ctor that takes a context object allocates new memory.
+  StringVal result(context, shorter.size());
   memcpy(result.ptr, shorter.c_str(), shorter.size());
   return result;
 }
