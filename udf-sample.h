@@ -42,13 +42,13 @@ BooleanVal FuzzyEquals(FunctionContext* context, const DoubleVal& x, const Doubl
 BooleanVal HasVowels(FunctionContext* context, const StringVal& input);
 
 
-// Usage: > create function countvowels(string) returns boolean
+// Usage: > create function countvowels(string) returns int
 //          location '/user/cloudera/libudfsample.so' SYMBOL='CountVowels';
 //        > select countvowels('abracadabra hocus pocus');
 //        > select countvowels(c1) from t1;
 IntVal CountVowels(FunctionContext* context, const StringVal& arg1);
 
-// Usage: > create function stripvowels(string) returns boolean
+// Usage: > create function stripvowels(string) returns string
 //          location '/user/cloudera/libudfsample.so' SYMBOL='StripVowels';
 //        > select stripvowels('colour color');
 //        > select stripvowels(c1) from t1;
