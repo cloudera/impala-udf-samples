@@ -30,4 +30,65 @@ BooleanVal FuzzyEquals(FunctionContext* ctx, const DoubleVal& x, const DoubleVal
   return BooleanVal(delta < EPSILON);
 }
 
+// Check if the input string has any occurrences of the letters (a,e,i,o,u).
+// Case-insensitive, so also detects (A,E,I,O,U).
+BooleanVal HasVowels(FunctionContext* context, const StringVal& input) {
+  if (input.is_null) return BooleanVal::null();
 
+  int index;
+  uint8_t *ptr;
+
+  for (ptr = input.ptr, index = 0; index < input.len; index++, ptr++) {
+    uint8_t c = tolower(*ptr);
+    if (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u') {
+      return BooleanVal(true);
+    }
+  }
+  return BooleanVal(false);
+}
+
+// Count all occurrences of the letters (a,e,i,o,u) in the input string.
+// Case-insensitive, so also counts (A,E,I,O,U).
+IntVal CountVowels(FunctionContext* context, const StringVal& arg1) {
+  if (arg1.is_null) return IntVal::null();
+
+  int count;
+  int index;
+  uint8_t *ptr;
+
+  for (ptr = arg1.ptr, count = 0, index = 0; index < arg1.len; index++, ptr++) {
+    uint8_t c = tolower(*ptr);
+    if (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u') {
+      count++;
+    }
+  }
+  return IntVal(count);
+}
+
+// Remove all occurrences of the letters (a,e,i,o,u) from the input string.
+// Case-insensitive, so also removes (A,E,I,O,U).
+StringVal StripVowels(FunctionContext* context, const StringVal& arg1) {
+  if (arg1.is_null) return StringVal::null();
+
+  int index;
+  std::string original((const char *)arg1.ptr,arg1.len);
+  std::string shorter("");
+
+  for (index = 0; index < original.length(); index++) {
+    uint8_t c = original[index];
+    uint8_t l = tolower(c);
+
+    if (l == 'a' || l == 'e' || l == 'i' || l == 'o' || l == 'u') {
+      continue;
+    }
+    else {
+        shorter.append(1, (char)c);
+    }
+  }
+  // The modified string is stored in 'shorter', which is destroyed when this function
+  // ends. We need to make a string val and copy the contents.
+  // NB: Only the version of the ctor that takes a context object allocates new memory.
+  StringVal result(context, shorter.size());
+  memcpy(result.ptr, shorter.c_str(), shorter.size());
+  return result;
+}
