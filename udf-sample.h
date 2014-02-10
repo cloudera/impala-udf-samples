@@ -31,4 +31,27 @@ IntVal AddUdf(FunctionContext* context, const IntVal& arg1, const IntVal& arg2);
 //        > select fuzzy_equals(1, 1.00000001);
 BooleanVal FuzzyEquals(FunctionContext* context, const DoubleVal& x, const DoubleVal& y);
 
+// Perform tests, calculations, and transformations
+// on a string value, using the set of letters 'aeiou'.
+
+// Usage: > create function hasvowels(string) returns boolean
+//          location '/user/cloudera/libudfsample.so' SYMBOL='HasVowels';
+//        > select hasvowels('banana');
+//        > select hasvowels('grr hm shhh');
+//        > select hasvowels(c1) from t1;
+BooleanVal HasVowels(FunctionContext* context, const StringVal& input);
+
+
+// Usage: > create function countvowels(string) returns boolean
+//          location '/user/cloudera/libudfsample.so' SYMBOL='CountVowels';
+//        > select countvowels('abracadabra hocus pocus');
+//        > select countvowels(c1) from t1;
+IntVal CountVowels(FunctionContext* context, const StringVal& arg1);
+
+// Usage: > create function stripvowels(string) returns boolean
+//          location '/user/cloudera/libudfsample.so' SYMBOL='StripVowels';
+//        > select stripvowels('colour color');
+//        > select stripvowels(c1) from t1;
+StringVal StripVowels(FunctionContext* context, const StringVal& arg1);
+
 #endif
