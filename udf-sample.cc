@@ -38,7 +38,7 @@ BooleanVal HasVowels(FunctionContext* context, const StringVal& input) {
   int index;
   uint8_t *ptr;
 
-  for (ptr = input.ptr, index = 0; index <= input.len; index++, ptr++) {
+  for (ptr = input.ptr, index = 0; index < input.len; index++, ptr++) {
     uint8_t c = tolower(*ptr);
     if (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u') {
       return BooleanVal(true);
@@ -56,7 +56,7 @@ IntVal CountVowels(FunctionContext* context, const StringVal& arg1) {
   int index;
   uint8_t *ptr;
 
-  for (ptr = arg1.ptr, count = 0, index = 0; index <= arg1.len; index++, ptr++) {
+  for (ptr = arg1.ptr, count = 0, index = 0; index < arg1.len; index++, ptr++) {
     uint8_t c = tolower(*ptr);
     if (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u') {
       count++;
@@ -79,7 +79,7 @@ StringVal StripVowels(FunctionContext* context, const StringVal& arg1) {
     uint8_t l = tolower(c);
 
     if (l == 'a' || l == 'e' || l == 'i' || l == 'o' || l == 'u') {
-      ;
+      continue;
     }
     else {
         shorter.append(1, (char)c);
