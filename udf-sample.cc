@@ -13,7 +13,10 @@
 // limitations under the License.
 
 #include "udf-sample.h"
-#include <math.h>
+
+#include <cctype>
+#include <cmath>
+#include <string>
 
 // In this sample we are declaring a UDF that adds two ints and returns an int.
 IntVal AddUdf(FunctionContext* context, const IntVal& arg1, const IntVal& arg2) {
