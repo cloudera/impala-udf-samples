@@ -14,6 +14,25 @@
 
 cmake_minimum_required(VERSION 2.6)
 
+# Add Modules from external folder
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake_modules/")
+
+# libraries
+set(LINK_LIBRARIES)
+
+
+# PAPI http://icl.cs.utk.edu/papi/index.html is used to get additional
+# information about the expected performance of a UDF. It allows us
+# to count cycles, branches, instructions etc so that we can possibly
+# estimate the performance.
+find_package(PAPI)
+if (PAPI_FOUND)
+  list(APPEND LINK_LIBRARIES ${PAPI_LIBRARIES})
+  include_directories( ${PAPI_INCLUDE_DIR} )
+  add_definitions(-DHAVE_PAPI)
+endif (PAPI_FOUND)
+
+
 # where to put generated libraries
 set(LIBRARY_OUTPUT_PATH "build")
 # where to put generated binaries
@@ -46,9 +65,16 @@ if (CLANG_EXECUTABLE)
   COMPILE_TO_IR(uda-sample.cc )
 endif(CLANG_EXECUTABLE)
 
+# Some Debug Info
+add_definitions("-g -O3")
 # This is an example of how to use the test harness to help develop UDF and UDAs.
 add_executable(udf-sample-test udf-sample-test.cc)
-target_link_libraries(udf-sample-test ImpalaUdf udfsample)
+target_link_libraries(udf-sample-test ImpalaUdf udfsample ${LINK_LIBRARIES})
 add_executable(uda-sample-test uda-sample-test.cc)
-target_link_libraries(uda-sample-test ImpalaUdf udasample)
+target_link_libraries(uda-sample-test ImpalaUdf udasample ${LINK_LIBRARIES})
 
+# Example for adding the Papi lib for building part
+if(PAPI_FOUND)
+  add_executable(udf-sample-test-perf udf-sample-test-perf.cc)
+  target_link_libraries(udf-sample-test-perf ImpalaUdf udfsample ${LINK_LIBRARIES})
+endif(PAPI_FOUND)
