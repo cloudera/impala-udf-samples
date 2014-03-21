@@ -30,7 +30,7 @@ bool TestCount() {
   // Run the UDA over empty input
   vector<IntVal> empty;
   if (!test.Execute(empty, BigIntVal(0))) {
-    cerr << test.GetErrorMsg() << endl;
+    cerr << "Count empty: " << test.GetErrorMsg() << endl;
     return false;
   }
 
@@ -38,7 +38,7 @@ bool TestCount() {
   vector<IntVal> no_nulls;
   no_nulls.resize(10000);
   if (!test.Execute(no_nulls, BigIntVal(no_nulls.size()))) {
-    cerr << test.GetErrorMsg() << endl;
+    cerr << "Count without nulls: " << test.GetErrorMsg() << endl;
     return false;
   }
 
@@ -51,7 +51,7 @@ bool TestCount() {
     --expected;
   }
   if (!test.Execute(some_nulls, BigIntVal(expected))) {
-    cerr << test.GetErrorMsg() << endl;
+    cerr << "Count with nulls: " << test.GetErrorMsg() << endl;
     return false;
   }
 
@@ -60,14 +60,14 @@ bool TestCount() {
 
 bool TestAvg() {
   UdaTestHarness<StringVal, StringVal, DoubleVal> test(
-      AvgInit, AvgUpdate, AvgMerge, NULL, AvgFinalize);
+      AvgInit, AvgUpdate, AvgMerge, AvgSerialize, AvgFinalize);
   test.SetIntermediateSize(16);
 
   vector<DoubleVal> vals;
 
   // Test empty input
   if (!test.Execute<DoubleVal>(vals, StringVal::null())) {
-    cerr << test.GetErrorMsg() << endl;
+    cerr << "Avg empty: " << test.GetErrorMsg() << endl;
     return false;
   }
 
@@ -76,7 +76,7 @@ bool TestAvg() {
     vals.push_back(DoubleVal(i));
   }
   if (!test.Execute<DoubleVal>(vals, StringVal("500"))) {
-    cerr << test.GetErrorMsg() << endl;
+    cerr << "Avg: " << test.GetErrorMsg() << endl;
     return false;
   }
   return true;
@@ -85,7 +85,7 @@ bool TestAvg() {
 bool TestStringConcat() {
   // Use the UDA test harness to validate the COUNT UDA.
   UdaTestHarness2<StringVal, StringVal, StringVal, StringVal> test(
-      StringConcatInit, StringConcatUpdate, StringConcatMerge, NULL,
+      StringConcatInit, StringConcatUpdate, StringConcatMerge, StringConcatSerialize,
       StringConcatFinalize);
 
   vector<StringVal> values;
@@ -93,7 +93,7 @@ bool TestStringConcat() {
 
   // Test empty input
   if (!test.Execute(values, separators, StringVal::null())) {
-    cerr << test.GetErrorMsg() << endl;
+    cerr << "String concat empty: " << test.GetErrorMsg() << endl;
     return false;
   }
 
@@ -105,7 +105,7 @@ bool TestStringConcat() {
     separators.push_back(",");
   }
   if (!test.Execute(values, separators, StringVal("Hello,World"))) {
-    cerr << test.GetErrorMsg() << endl;
+    cerr << "String concat: " << test.GetErrorMsg() << endl;
     return false;
   }
 
@@ -140,16 +140,16 @@ bool FuzzyCompareStrings(const StringVal& x, const StringVal& y) {
 bool TestVariance() {
   // Setup the test UDAs.
   UdaTestHarness<StringVal, StringVal, DoubleVal> simple_variance(
-      VarianceInit, VarianceUpdate, VarianceMerge, NULL, VarianceFinalize);
+      VarianceInit, VarianceUpdate, VarianceMerge, VarianceSerialize, VarianceFinalize);
   simple_variance.SetResultComparator(FuzzyCompareStrings);
 
   UdaTestHarness<StringVal, StringVal, DoubleVal> knuth_variance(
-      KnuthVarianceInit, KnuthVarianceUpdate, KnuthVarianceMerge, NULL,
+      KnuthVarianceInit, KnuthVarianceUpdate, KnuthVarianceMerge, KnuthVarianceSerialize,
       KnuthVarianceFinalize);
   knuth_variance.SetResultComparator(FuzzyCompareStrings);
 
   UdaTestHarness<StringVal, StringVal, DoubleVal> stddev(
-      KnuthVarianceInit, KnuthVarianceUpdate, KnuthVarianceMerge, NULL,
+      KnuthVarianceInit, KnuthVarianceUpdate, KnuthVarianceMerge, KnuthVarianceSerialize,
       StdDevFinalize);
   stddev.SetResultComparator(FuzzyCompareStrings);
 
