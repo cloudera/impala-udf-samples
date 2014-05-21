@@ -95,3 +95,45 @@ StringVal StripVowels(FunctionContext* context, const StringVal& arg1) {
   memcpy(result.ptr, shorter.c_str(), shorter.size());
   return result;
 }
+
+// In the prepare function, allocate an IntVal and set it as the shared state. This
+// IntVal will be set to the result to be returned, i.e. the argument if it's constant
+// and null otherwise.
+void ReturnConstantArgPrepare(
+    FunctionContext* context, FunctionContext::FunctionStateScope scope) {
+  // UDFs should check the version to avoid unimplemented functions from being called
+  if (context->version() < FunctionContext::v1_3) {
+    context->SetError("This UDF can only be used with Impala 1.3 or higher");
+    return;
+  }
+  // TODO: this can be FRAGMENT_LOCAL once it's implemented since we're creating
+  // read-only state
+  if (scope == FunctionContext::THREAD_LOCAL) {
+    // Get the constant value of the 'const_val' argument in ReturnConstantArg(). If this
+    // value is not constant, 'arg' will be NULL.
+    IntVal* arg = reinterpret_cast<IntVal*>(context->GetConstantArg(0));
+    // Allocate shared state to store 'arg' or a null IntVal
+    IntVal* state = reinterpret_cast<IntVal*>(context->Allocate(sizeof(IntVal)));
+    *state = (arg != NULL) ? *arg : IntVal::null();
+    // Set the shared state in the function context
+    context->SetFunctionState(scope, state);
+  }
+}
+
+// Retreives and returns the shared state set in the prepare function
+IntVal ReturnConstantArg(FunctionContext* context, const IntVal& const_val) {
+  IntVal* state = reinterpret_cast<IntVal*>(
+      context->GetFunctionState(FunctionContext::THREAD_LOCAL));
+  return *state;
+}
+
+// Cleans up the shared state
+void ReturnConstantArgClose(
+    FunctionContext* context, FunctionContext::FunctionStateScope scope) {
+  if (scope == FunctionContext::THREAD_LOCAL) {
+    // Retreive and deallocate the shared state
+    void* state = context->GetFunctionState(scope);
+    context->Free(reinterpret_cast<uint8_t*>(state));
+    context->SetFunctionState(scope, NULL);
+  }
+}

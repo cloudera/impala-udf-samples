@@ -54,4 +54,18 @@ IntVal CountVowels(FunctionContext* context, const StringVal& arg1);
 //        > select stripvowels(c1) from t1;
 StringVal StripVowels(FunctionContext* context, const StringVal& arg1);
 
+// If 'val' is constant, returns 'val', otherwise returns null. This is a simple toy UDF
+// demonstrating how to use prepare and close functions to maintain shared state.
+// Requires Impala 1.3 or higher.
+// Usage: > create function constantarg(int) returns int
+//          location '/user/cloudera/libudfsample.so' symbol='ReturnConstantArg'
+//          prepare_fn='ReturnConstantArgPrepare' close_fn='ReturnConstantArgClose';
+//        > select constantarg(1 + 1);
+//        > select constantarg(c1) from t1 limit 1;
+IntVal ReturnConstantArg(FunctionContext* context, const IntVal& val);
+void ReturnConstantArgPrepare(
+    FunctionContext* context, FunctionContext::FunctionStateScope scope);
+void ReturnConstantArgClose(
+    FunctionContext* context, FunctionContext::FunctionStateScope scope);
+
 #endif

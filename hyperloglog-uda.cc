@@ -81,6 +81,15 @@ void HllMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
   }
 }
 
+const StringVal HllSerialize(FunctionContext* ctx, const StringVal& src) {
+  if (src.is_null) return src;
+  // Copy intermediate state into memory owned by Impala and free allocated memory
+  StringVal result(ctx, src.len);
+  memcpy(result.ptr, src.ptr, src.len);
+  ctx->Free(src.ptr);
+  return result;
+}
+
 StringVal HllFinalize(FunctionContext* ctx, const StringVal& src) {
   assert(!src.is_null);
   assert(src.len == pow(2, HLL_PRECISION));
@@ -112,6 +121,9 @@ StringVal HllFinalize(FunctionContext* ctx, const StringVal& src) {
     // linear counting.
     estimate = num_streams * log(static_cast<float>(num_streams) / num_zero_registers);
   }
+
+  // Free allocated memory
+  ctx->Free(src.ptr);
 
   // Output the estimate as ascii string
   stringstream out;

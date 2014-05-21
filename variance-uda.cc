@@ -61,12 +61,21 @@ void VarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
   dst_state->count += src_state->count;
 }
 
+// A serialize function is necessary to free the intermediate state allocation.
+const StringVal VarianceSerialize(FunctionContext* ctx, const StringVal& src) {
+  StringVal result(ctx, src.len);
+  memcpy(result.ptr, src.ptr, src.len);
+  ctx->Free(src.ptr);
+  return result;
+}
+
 StringVal VarianceFinalize(FunctionContext* ctx, const StringVal& src) {
-  VarianceState* state = reinterpret_cast<VarianceState*>(src.ptr);
-  if (state->count == 0 || state->count == 1) return StringVal::null();
-  double mean = state->sum / state->count;
+  VarianceState state = *reinterpret_cast<VarianceState*>(src.ptr);
+  ctx->Free(src.ptr);
+  if (state.count == 0 || state.count == 1) return StringVal::null();
+  double mean = state.sum / state.count;
   double variance =
-      (state->sum_squared - state->sum * state->sum / state->count) / (state->count - 1);
+      (state.sum_squared - state.sum * state.sum / state.count) / (state.count - 1);
   return ToStringVal(ctx, variance);
 }
 
@@ -106,6 +115,12 @@ void KnuthVarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* d
   dst_state->count = sum_count;
 }
 
+// Same as VarianceSerialize(). Create a wrapper function so automatic symbol resolution
+// still works.
+const StringVal KnuthVarianceSerialize(FunctionContext* ctx, const StringVal& state_sv) {
+  return VarianceSerialize(ctx, state_sv);
+}
+
 // TODO: this can be used as the actual variance finalize function once the return type
 // doesn't need to match the intermediate type in Impala 2.0.
 DoubleVal KnuthVarianceFinalize(const StringVal& state_sv) {
@@ -117,11 +132,14 @@ DoubleVal KnuthVarianceFinalize(const StringVal& state_sv) {
 }
 
 StringVal KnuthVarianceFinalize(FunctionContext* ctx, const StringVal& src) {
-  return ToStringVal(ctx, KnuthVarianceFinalize(src));
+  StringVal result =  ToStringVal(ctx, KnuthVarianceFinalize(src));
+  ctx->Free(src.ptr);
+  return result;
 }
 
 StringVal StdDevFinalize(FunctionContext* ctx, const StringVal& src) {
   DoubleVal variance = KnuthVarianceFinalize(src);
+  ctx->Free(src.ptr);
   if (variance.is_null) return StringVal::null();
   return ToStringVal(ctx, sqrt(variance.val));
 }

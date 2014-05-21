@@ -89,12 +89,32 @@ void AvgMerge(FunctionContext* context, const StringVal& src, StringVal* dst) {
   dst_avg->count += src_avg->count;
 }
 
+// A serialize function is necesary to free the intermediate state allocation. We use the
+// StringVal constructor to allocate memory owned by Impala, copy the intermediate state,
+// and free the original allocation. Note that memory allocated by the StringVal ctor is
+// not necessarily persisted across UDA function calls, which is why we don't use it in
+// AvgInit().
+const StringVal AvgSerialize(FunctionContext* context, const StringVal& val) {
+  assert(!val.is_null);
+  StringVal result(context, val.len);
+  memcpy(result.ptr, val.ptr, val.len);
+  context->Free(val.ptr);
+  return result;
+}
+
 StringVal AvgFinalize(FunctionContext* context, const StringVal& val) {
   assert(!val.is_null);
   assert(val.len == sizeof(AvgStruct));
   AvgStruct* avg = reinterpret_cast<AvgStruct*>(val.ptr);
-  if (avg->count == 0) return StringVal::null();
-  return ToStringVal(context, avg->sum / avg->count);
+  StringVal result;
+  if (avg->count == 0) {
+    result = StringVal::null();
+  } else {
+    // Copies the result to memory owned by Impala
+    result = ToStringVal(context, avg->sum / avg->count);
+  }
+  context->Free(val.ptr);
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,6 +157,24 @@ void StringConcatMerge(FunctionContext* context, const StringVal& src, StringVal
   StringConcatUpdate(context, src, ",", dst);
 }
 
+// A serialize function is necesary to free the intermediate state allocation. We use the
+// StringVal constructor to allocate memory owned by Impala, copy the intermediate
+// StringVal, and free the intermediate's memory. Note that memory allocated by the
+// StringVal ctor is not necessarily persisted across UDA function calls, which is why we
+// don't use it in StringConcatUpdate().
+const StringVal StringConcatSerialize(FunctionContext* context, const StringVal& val) {
+  if (val.is_null) return val;
+  StringVal result(context, val.len);
+  memcpy(result.ptr, val.ptr, val.len);
+  context->Free(val.ptr);
+  return result;
+}
+
+// Same as StringConcatSerialize().
 StringVal StringConcatFinalize(FunctionContext* context, const StringVal& val) {
-  return val;
+  if (val.is_null) return val;
+  StringVal result(context, val.len);
+  memcpy(result.ptr, val.ptr, val.len);
+  context->Free(val.ptr);
+  return result;
 }

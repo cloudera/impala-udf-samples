@@ -38,6 +38,21 @@ int main(int argc, char** argv) {
   passed &= UdfTestHarness::ValidateUdf<BooleanVal, DoubleVal, DoubleVal>(
       FuzzyEquals, DoubleVal(1.1), DoubleVal(1.0), BooleanVal(false));
 
+  // Test ReturnConstantArg sample
+  // Test constant arg
+  vector<AnyVal*> constant_args;
+  constant_args.push_back(new IntVal(1));
+  passed &= UdfTestHarness::ValidateUdf<IntVal, IntVal>(
+      ReturnConstantArg, IntVal(1), IntVal(1), ReturnConstantArgPrepare,
+      ReturnConstantArgClose, constant_args);
+  delete constant_args[0];
+  constant_args.clear();
+
+  // Test non-constant arg
+  passed &= UdfTestHarness::ValidateUdf<IntVal, IntVal>(
+      ReturnConstantArg, IntVal(1), IntVal::null(), ReturnConstantArgPrepare,
+      ReturnConstantArgClose);
+
   cout << "Tests " << (passed ? "Passed." : "Failed.") << endl;
   return !passed;
 }
