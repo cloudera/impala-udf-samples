@@ -25,7 +25,7 @@ using namespace impala_udf;
 // https://github.com/cloudera/impala/blob/master/be/src/udf/udf.h). Some UDAs naturally
 // conform to this limitation, such as Count and StringConcat. However, other UDAs return
 // a numeric value but use a custom intermediate struct type that must be stored in a
-// StringVal or BufferVal, such as Variance.
+// StringVal, such as Variance.
 //
 // As a workaround for now, these UDAs that require an intermediate buffer use StringVal
 // for the intermediate and result type. In the UDAs' finalize functions, the numeric
@@ -48,15 +48,12 @@ BigIntVal CountFinalize(FunctionContext* context, const BigIntVal& val);
 
 // This is an example of the AVG(double) aggregate function. This function needs to
 // maintain two pieces of state, the current sum and the count. We do this using
-// the BufferVal intermediate type. When this UDA is registered, it would specify
+// the StringVal intermediate type. When this UDA is registered, it would specify
 // 16 bytes (8 byte sum + 8 byte count) as the size for this buffer.
 //
 // Usage: > create aggregate function my_avg(double) returns string 
 //          location '/user/cloudera/libudasample.so' update_fn='AvgUpdate';
 //        > select cast(my_avg(col) as double) from tbl;
-//
-// TODO: The StringVal intermediate type should be replaced by a prealloacted BufferVal
-// and the return type changed to DoubleVal in Impala 2.0
 void AvgInit(FunctionContext* context, StringVal* val);
 void AvgUpdate(FunctionContext* context, const DoubleVal& input, StringVal* val);
 void AvgMerge(FunctionContext* context, const StringVal& src, StringVal* dst);
@@ -80,9 +77,6 @@ StringVal StringConcatFinalize(FunctionContext* context, const StringVal& val);
 // Usage: > create aggregate function var(double) returns string
 //          location '/user/cloudera/libudasample.so' update_fn='VarianceUpdate';
 //        > select cast(var(col) as double) from tbl;
-//
-// TODO: The StringVal intermediate type should be replaced by a prealloacted BufferVal
-// and the return type changed to DoubleVal in Impala 2.0
 void VarianceInit(FunctionContext* context, StringVal* val);
 void VarianceUpdate(FunctionContext* context, const DoubleVal& input, StringVal* val);
 void VarianceMerge(FunctionContext* context, const StringVal& src, StringVal* dst);
@@ -95,9 +89,6 @@ StringVal VarianceFinalize(FunctionContext* context, const StringVal& val);
 // Usage: > create aggregate function knuth_var(double) returns string
 //          location '/user/cloudera/libudasample.so' update_fn='KnuthVarianceUpdate';
 //        > select cast(knuth_var(col) as double) from tbl;
-//
-// TODO: The StringVal intermediate type should be replaced by a prealloacted BufferVal
-// and the return type changed to DoubleVal in Impala 2.0
 void KnuthVarianceInit(FunctionContext* context, StringVal* val);
 void KnuthVarianceUpdate(FunctionContext* context, const DoubleVal& input, StringVal* val);
 void KnuthVarianceMerge(FunctionContext* context, const StringVal& src, StringVal* dst);
@@ -111,14 +102,9 @@ StringVal KnuthVarianceFinalize(FunctionContext* context, const StringVal& val);
 //          location '/user/cloudera/libudasample.so' update_fn='KnuthVarianceUpdate'
 //          finalize_fn="StdDevFinalize";
 //        > select cast(stddev(col) as double) from tbl;
-//
-// TODO: The StringVal intermediate type should be replaced by a prealloacted BufferVal
-// and the return type changed to DoubleVal in Impala 2.0
 StringVal StdDevFinalize(FunctionContext* context, const StringVal& val);
 
 // Utility function for serialization to StringVal
-// TODO: this will be unnecessary in Impala 2.0, when we will no longer have to serialize
-// results to StringVals in order to match the intermediate type
 template <typename T>
 StringVal ToStringVal(FunctionContext* context, const T& val);
 
