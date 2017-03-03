@@ -62,7 +62,7 @@ void VarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
 }
 
 // A serialize function is necessary to free the intermediate state allocation.
-const StringVal VarianceSerialize(FunctionContext* ctx, const StringVal& src) {
+StringVal VarianceSerialize(FunctionContext* ctx, const StringVal& src) {
   StringVal result(ctx, src.len);
   memcpy(result.ptr, src.ptr, src.len);
   ctx->Free(src.ptr);
@@ -117,7 +117,7 @@ void KnuthVarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* d
 
 // Same as VarianceSerialize(). Create a wrapper function so automatic symbol resolution
 // still works.
-const StringVal KnuthVarianceSerialize(FunctionContext* ctx, const StringVal& state_sv) {
+StringVal KnuthVarianceSerialize(FunctionContext* ctx, const StringVal& state_sv) {
   return VarianceSerialize(ctx, state_sv);
 }
 
