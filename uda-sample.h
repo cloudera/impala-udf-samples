@@ -57,7 +57,7 @@ BigIntVal CountFinalize(FunctionContext* context, const BigIntVal& val);
 void AvgInit(FunctionContext* context, StringVal* val);
 void AvgUpdate(FunctionContext* context, const DoubleVal& input, StringVal* val);
 void AvgMerge(FunctionContext* context, const StringVal& src, StringVal* dst);
-const StringVal AvgSerialize(FunctionContext* context, const StringVal& val);
+StringVal AvgSerialize(FunctionContext* context, const StringVal& val);
 StringVal AvgFinalize(FunctionContext* context, const StringVal& val);
 
 // This is a sample of implementing the STRING_CONCAT aggregate function.
@@ -69,7 +69,7 @@ void StringConcatInit(FunctionContext* context, StringVal* val);
 void StringConcatUpdate(FunctionContext* context, const StringVal& arg1,
     const StringVal& arg2, StringVal* val);
 void StringConcatMerge(FunctionContext* context, const StringVal& src, StringVal* dst);
-const StringVal StringConcatSerialize(FunctionContext* context, const StringVal& val);
+StringVal StringConcatSerialize(FunctionContext* context, const StringVal& val);
 StringVal StringConcatFinalize(FunctionContext* context, const StringVal& val);
 
 // This is a example of the variance aggregate function.
@@ -80,7 +80,7 @@ StringVal StringConcatFinalize(FunctionContext* context, const StringVal& val);
 void VarianceInit(FunctionContext* context, StringVal* val);
 void VarianceUpdate(FunctionContext* context, const DoubleVal& input, StringVal* val);
 void VarianceMerge(FunctionContext* context, const StringVal& src, StringVal* dst);
-const StringVal VarianceSerialize(FunctionContext* context, const StringVal& val);
+StringVal VarianceSerialize(FunctionContext* context, const StringVal& val);
 StringVal VarianceFinalize(FunctionContext* context, const StringVal& val);
 
 // An implementation of the Knuth online variance algorithm, which is also single pass and
@@ -92,7 +92,7 @@ StringVal VarianceFinalize(FunctionContext* context, const StringVal& val);
 void KnuthVarianceInit(FunctionContext* context, StringVal* val);
 void KnuthVarianceUpdate(FunctionContext* context, const DoubleVal& input, StringVal* val);
 void KnuthVarianceMerge(FunctionContext* context, const StringVal& src, StringVal* dst);
-const StringVal KnuthVarianceSerialize(FunctionContext* context, const StringVal& val);
+StringVal KnuthVarianceSerialize(FunctionContext* context, const StringVal& val);
 StringVal KnuthVarianceFinalize(FunctionContext* context, const StringVal& val);
 
 // The different steps of the UDA are composable. In this case, we'the UDA will use the

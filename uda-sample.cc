@@ -94,7 +94,7 @@ void AvgMerge(FunctionContext* context, const StringVal& src, StringVal* dst) {
 // and free the original allocation. Note that memory allocated by the StringVal ctor is
 // not necessarily persisted across UDA function calls, which is why we don't use it in
 // AvgInit().
-const StringVal AvgSerialize(FunctionContext* context, const StringVal& val) {
+StringVal AvgSerialize(FunctionContext* context, const StringVal& val) {
   assert(!val.is_null);
   StringVal result(context, val.len);
   memcpy(result.ptr, val.ptr, val.len);
@@ -162,7 +162,7 @@ void StringConcatMerge(FunctionContext* context, const StringVal& src, StringVal
 // StringVal, and free the intermediate's memory. Note that memory allocated by the
 // StringVal ctor is not necessarily persisted across UDA function calls, which is why we
 // don't use it in StringConcatUpdate().
-const StringVal StringConcatSerialize(FunctionContext* context, const StringVal& val) {
+StringVal StringConcatSerialize(FunctionContext* context, const StringVal& val) {
   if (val.is_null) return val;
   StringVal result(context, val.len);
   memcpy(result.ptr, val.ptr, val.len);
