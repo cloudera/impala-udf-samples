@@ -59,8 +59,11 @@ bool TestCount() {
 }
 
 bool TestAvg() {
-  UdaTestHarness<StringVal, StringVal, DoubleVal> test(
-      AvgInit, AvgUpdate, AvgMerge, AvgSerialize, AvgFinalize);
+  typedef UdaTestHarness<StringVal, StringVal, DoubleVal> TestHarness;
+  // Note: reinterpret_cast is required because pre-2.9 UDF headers had a spurious "const"
+  // specifier in the return type for SerializeFn. It is unnecessary for 2.9+ headers.
+  TestHarness test(AvgInit, AvgUpdate, AvgMerge,
+      reinterpret_cast<TestHarness::SerializeFn>(AvgSerialize), AvgFinalize);
   test.SetIntermediateSize(16);
 
   vector<DoubleVal> vals;
@@ -84,8 +87,11 @@ bool TestAvg() {
 
 bool TestStringConcat() {
   // Use the UDA test harness to validate the COUNT UDA.
-  UdaTestHarness2<StringVal, StringVal, StringVal, StringVal> test(
-      StringConcatInit, StringConcatUpdate, StringConcatMerge, StringConcatSerialize,
+  typedef UdaTestHarness2<StringVal, StringVal, StringVal, StringVal> TestHarness;
+  // Note: reinterpret_cast is required because pre-2.9 UDF headers had a spurious "const"
+  // specifier in the return type for SerializeFn.
+  TestHarness test(StringConcatInit, StringConcatUpdate, StringConcatMerge,
+      reinterpret_cast<TestHarness::SerializeFn>(StringConcatSerialize),
       StringConcatFinalize);
 
   vector<StringVal> values;
@@ -139,18 +145,22 @@ bool FuzzyCompareStrings(const StringVal& x, const StringVal& y) {
 
 bool TestVariance() {
   // Setup the test UDAs.
-  UdaTestHarness<StringVal, StringVal, DoubleVal> simple_variance(
-      VarianceInit, VarianceUpdate, VarianceMerge, VarianceSerialize, VarianceFinalize);
+  // Note: reinterpret_cast is required because pre-2.9 UDF headers had a spurious "const"
+  // specifier in the return type for SerializeFn.
+  typedef UdaTestHarness<StringVal, StringVal, DoubleVal> TestHarness;
+  TestHarness simple_variance(VarianceInit, VarianceUpdate, VarianceMerge,
+      reinterpret_cast<TestHarness::SerializeFn>(VarianceSerialize), VarianceFinalize);
   simple_variance.SetResultComparator(FuzzyCompareStrings);
 
   UdaTestHarness<StringVal, StringVal, DoubleVal> knuth_variance(
-      KnuthVarianceInit, KnuthVarianceUpdate, KnuthVarianceMerge, KnuthVarianceSerialize,
+      KnuthVarianceInit, KnuthVarianceUpdate, KnuthVarianceMerge,
+      reinterpret_cast<TestHarness::SerializeFn>(KnuthVarianceSerialize),
       KnuthVarianceFinalize);
   knuth_variance.SetResultComparator(FuzzyCompareStrings);
 
   UdaTestHarness<StringVal, StringVal, DoubleVal> stddev(
-      KnuthVarianceInit, KnuthVarianceUpdate, KnuthVarianceMerge, KnuthVarianceSerialize,
-      StdDevFinalize);
+      KnuthVarianceInit, KnuthVarianceUpdate, KnuthVarianceMerge,
+      reinterpret_cast<TestHarness::SerializeFn>(KnuthVarianceSerialize), StdDevFinalize);
   stddev.SetResultComparator(FuzzyCompareStrings);
 
   // Test empty input
