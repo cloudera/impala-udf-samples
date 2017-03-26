@@ -24,18 +24,18 @@ using namespace std;
 
 bool TestCount() {
   // Use the UDA test harness to validate the COUNT UDA.
-  UdaTestHarness<BigIntVal, BigIntVal, IntVal> test(
+  UdaTestHarness<BigIntVal, BigIntVal, BigIntVal> test(
       CountInit, CountUpdate, CountMerge, NULL, CountFinalize);
 
   // Run the UDA over empty input
-  vector<IntVal> empty;
+  vector<BigIntVal> empty;
   if (!test.Execute(empty, BigIntVal(0))) {
     cerr << "Count empty: " << test.GetErrorMsg() << endl;
     return false;
   }
 
   // Run the UDA over 10000 non-null values
-  vector<IntVal> no_nulls;
+  vector<BigIntVal> no_nulls;
   no_nulls.resize(10000);
   if (!test.Execute(no_nulls, BigIntVal(no_nulls.size()))) {
     cerr << "Count without nulls: " << test.GetErrorMsg() << endl;
@@ -43,11 +43,11 @@ bool TestCount() {
   }
 
   // Run the UDA with some nulls
-  vector<IntVal> some_nulls;
+  vector<BigIntVal> some_nulls;
   some_nulls.resize(10000);
   int expected = some_nulls.size();
   for (int i = 0; i < some_nulls.size(); i += 100) {
-    some_nulls[i] = IntVal::null();
+    some_nulls[i] = BigIntVal::null();
     --expected;
   }
   if (!test.Execute(some_nulls, BigIntVal(expected))) {

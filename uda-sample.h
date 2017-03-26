@@ -42,7 +42,7 @@ using namespace impala_udf;
 //          location '/user/cloudera/libudasample.so' update_fn='CountUpdate';
 //        > select my_count(col) from tbl;
 void CountInit(FunctionContext* context, BigIntVal* val);
-void CountUpdate(FunctionContext* context, const IntVal& input, BigIntVal* val);
+void CountUpdate(FunctionContext* context, const BigIntVal& input, BigIntVal* val);
 void CountMerge(FunctionContext* context, const BigIntVal& src, BigIntVal* dst);
 BigIntVal CountFinalize(FunctionContext* context, const BigIntVal& val);
 
