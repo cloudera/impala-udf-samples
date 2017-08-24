@@ -66,15 +66,21 @@ struct AvgStruct {
 
 // Initialize the StringVal intermediate to a zero'd AvgStruct
 void AvgInit(FunctionContext* context, StringVal* val) {
+  val->ptr = context->Allocate(sizeof(AvgStruct));
+  // Exit on failed allocation. Impala will fail the query after some time.
+  if (val->ptr == NULL) {
+    *val = StringVal::null();
+    return;
+  }
   val->is_null = false;
   val->len = sizeof(AvgStruct);
-  val->ptr = context->Allocate(val->len);
   memset(val->ptr, 0, val->len);
 }
 
 void AvgUpdate(FunctionContext* context, const DoubleVal& input, StringVal* val) {
   if (input.is_null) return;
-  assert(!val->is_null);
+  // Handle failed allocation. Impala will fail the query after some time.
+  if (val->is_null) return;
   assert(val->len == sizeof(AvgStruct));
   AvgStruct* avg = reinterpret_cast<AvgStruct*>(val->ptr);
   avg->sum += input.val;
@@ -82,7 +88,7 @@ void AvgUpdate(FunctionContext* context, const DoubleVal& input, StringVal* val)
 }
 
 void AvgMerge(FunctionContext* context, const StringVal& src, StringVal* dst) {
-  if (src.is_null) return;
+  if (src.is_null || dst->is_null) return;
   const AvgStruct* src_avg = reinterpret_cast<const AvgStruct*>(src.ptr);
   AvgStruct* dst_avg = reinterpret_cast<AvgStruct*>(dst->ptr);
   dst_avg->sum += src_avg->sum;
@@ -95,15 +101,17 @@ void AvgMerge(FunctionContext* context, const StringVal& src, StringVal* dst) {
 // not necessarily persisted across UDA function calls, which is why we don't use it in
 // AvgInit().
 StringVal AvgSerialize(FunctionContext* context, const StringVal& val) {
-  assert(!val.is_null);
-  StringVal result(context, val.len);
-  memcpy(result.ptr, val.ptr, val.len);
+  if (val.is_null) return StringVal::null();
+  // Copy the value into Impala-managed memory with StringVal::CopyFrom().
+  // NB: CopyFrom() will return a null StringVal and and fail the query if the allocation
+  // fails because of lack of memory.
+  StringVal result = StringVal::CopyFrom(context, val.ptr, val.len);
   context->Free(val.ptr);
   return result;
 }
 
 StringVal AvgFinalize(FunctionContext* context, const StringVal& val) {
-  assert(!val.is_null);
+  if (val.is_null) return StringVal::null();
   assert(val.len == sizeof(AvgStruct));
   AvgStruct* avg = reinterpret_cast<AvgStruct*>(val.ptr);
   StringVal result;
@@ -134,6 +142,8 @@ void StringConcatUpdate(FunctionContext* context, const StringVal& str,
   if (result->is_null) {
     // This is the first string, simply set the result to be the value.
     uint8_t* copy = context->Allocate(str.len);
+    // If the allocation fails, don't update the result, just let Impala fail the query.
+    if (copy == NULL) return;
     memcpy(copy, str.ptr, str.len);
     *result = StringVal(copy, str.len);
     return;
@@ -146,6 +156,11 @@ void StringConcatUpdate(FunctionContext* context, const StringVal& str,
   // separator.
   int new_size = result->len + sep_ptr->len + str.len;
   result->ptr = context->Reallocate(result->ptr, new_size);
+  if (result->ptr == NULL) {
+    // If the allocation fails, set the result to null and let Impala fail the query.
+    *result = StringVal::null();
+    return;
+  }
   memcpy(result->ptr + result->len, sep_ptr->ptr, sep_ptr->len);
   result->len += sep_ptr->len;
   memcpy(result->ptr + result->len, str.ptr, str.len);
@@ -164,8 +179,10 @@ void StringConcatMerge(FunctionContext* context, const StringVal& src, StringVal
 // don't use it in StringConcatUpdate().
 StringVal StringConcatSerialize(FunctionContext* context, const StringVal& val) {
   if (val.is_null) return val;
-  StringVal result(context, val.len);
-  memcpy(result.ptr, val.ptr, val.len);
+  // Copy the value into Impala-managed memory with StringVal::CopyFrom().
+  // NB: CopyFrom() will return a null StringVal and and fail the query if the allocation
+  // fails because of lack of memory.
+  StringVal result = StringVal::CopyFrom(context, val.ptr, val.len);
   context->Free(val.ptr);
   return result;
 }
@@ -173,8 +190,10 @@ StringVal StringConcatSerialize(FunctionContext* context, const StringVal& val) 
 // Same as StringConcatSerialize().
 StringVal StringConcatFinalize(FunctionContext* context, const StringVal& val) {
   if (val.is_null) return val;
-  StringVal result(context, val.len);
-  memcpy(result.ptr, val.ptr, val.len);
+  // Copy the value into Impala-managed memory with StringVal::CopyFrom().
+  // NB: CopyFrom() will return a null StringVal and and fail the query if the allocation
+  // fails because of lack of memory.
+  StringVal result = StringVal::CopyFrom(context, val.ptr, val.len);
   context->Free(val.ptr);
   return result;
 }

@@ -33,8 +33,13 @@ const int HLL_PRECISION = 10;
 
 void HllInit(FunctionContext* ctx, StringVal* dst) {
   int str_len = pow(2, HLL_PRECISION);
-  dst->is_null = false;
   dst->ptr = ctx->Allocate(str_len);
+  // Handle failed allocation. Impala will fail the query after some time.
+  if (dst->ptr == NULL) {
+    *dst = StringVal::null();
+    return;
+  }
+  dst->is_null = false;
   dst->len = str_len;
   memset(dst->ptr, 0, str_len);
 }
@@ -58,7 +63,7 @@ static uint64_t Hash(const IntVal& v) {
 void HllUpdate(FunctionContext* ctx, const IntVal& src, StringVal* dst) {
   if (src.is_null) return;
   assert(dst != NULL);
-  assert(!dst->is_null);
+  if (dst->is_null) return;
   assert(dst->len == pow(2, HLL_PRECISION));
   uint64_t hash_value = Hash(src);
   if (hash_value != 0) {
@@ -72,8 +77,7 @@ void HllUpdate(FunctionContext* ctx, const IntVal& src, StringVal* dst) {
 
 void HllMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
   assert(dst != NULL);
-  assert(!dst->is_null);
-  assert(!src.is_null);
+  if (src.is_null || dst->is_null) return;
   assert(dst->len == pow(2, HLL_PRECISION));
   assert(src.len == pow(2, HLL_PRECISION));
   for (int i = 0; i < src.len; ++i) {
@@ -82,7 +86,7 @@ void HllMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
 }
 
 const StringVal HllSerialize(FunctionContext* ctx, const StringVal& src) {
-  if (src.is_null) return src;
+  if (src.is_null) return StringVal::null();
   // Copy intermediate state into memory owned by Impala and free allocated memory
   StringVal result(ctx, src.len);
   memcpy(result.ptr, src.ptr, src.len);
@@ -91,7 +95,7 @@ const StringVal HllSerialize(FunctionContext* ctx, const StringVal& src) {
 }
 
 StringVal HllFinalize(FunctionContext* ctx, const StringVal& src) {
-  assert(!src.is_null);
+  if (src.is_null) return StringVal::null();
   assert(src.len == pow(2, HLL_PRECISION));
 
   const int num_streams = pow(2, HLL_PRECISION);
