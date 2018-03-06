@@ -39,14 +39,19 @@ struct VarianceState {
 };
 
 void VarianceInit(FunctionContext* ctx, StringVal* dst) {
+  dst->ptr = ctx->Allocate(sizeof(VarianceState));
+  // Handle failed allocation. Impala will fail the query after some time.
+  if (dst->ptr == NULL) {
+    *dst = StringVal::null();
+    return;
+  }
   dst->is_null = false;
   dst->len = sizeof(VarianceState);
-  dst->ptr = ctx->Allocate(dst->len);
   memset(dst->ptr, 0, dst->len);
 }
 
 void VarianceUpdate(FunctionContext* ctx, const DoubleVal& src, StringVal* dst) {
-  if (src.is_null) return;
+  if (src.is_null || dst->is_null) return;
   VarianceState* state = reinterpret_cast<VarianceState*>(dst->ptr);
   state->sum += src.val;
   state->sum_squared += src.val * src.val;
@@ -54,6 +59,7 @@ void VarianceUpdate(FunctionContext* ctx, const DoubleVal& src, StringVal* dst) 
 }
 
 void VarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
+  if (src.is_null || dst->is_null) return;
   VarianceState* src_state = reinterpret_cast<VarianceState*>(src.ptr);
   VarianceState* dst_state = reinterpret_cast<VarianceState*>(dst->ptr);
   dst_state->sum += src_state->sum;
@@ -63,6 +69,7 @@ void VarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
 
 // A serialize function is necessary to free the intermediate state allocation.
 StringVal VarianceSerialize(FunctionContext* ctx, const StringVal& src) {
+  if (src.is_null) return StringVal::null();
   StringVal result(ctx, src.len);
   memcpy(result.ptr, src.ptr, src.len);
   ctx->Free(src.ptr);
@@ -70,6 +77,7 @@ StringVal VarianceSerialize(FunctionContext* ctx, const StringVal& src) {
 }
 
 StringVal VarianceFinalize(FunctionContext* ctx, const StringVal& src) {
+  if (src.is_null) return StringVal::null();
   VarianceState state = *reinterpret_cast<VarianceState*>(src.ptr);
   ctx->Free(src.ptr);
   if (state.count == 0 || state.count == 1) return StringVal::null();
@@ -86,14 +94,19 @@ struct KnuthVarianceState {
 };
 
 void KnuthVarianceInit(FunctionContext* ctx, StringVal* dst) {
+  dst->ptr = ctx->Allocate(sizeof(KnuthVarianceState));
+  // Handle failed allocation. Impala will fail the query after some time.
+  if (dst->ptr == NULL) {
+    *dst = StringVal::null();
+    return;
+  }
   dst->is_null = false;
   dst->len = sizeof(KnuthVarianceState);
-  dst->ptr = ctx->Allocate(dst->len);
   memset(dst->ptr, 0, dst->len);
 }
 
 void KnuthVarianceUpdate(FunctionContext* ctx, const DoubleVal& src, StringVal* dst) {
-  if (src.is_null) return;
+  if (src.is_null || dst->is_null) return;
   KnuthVarianceState* state = reinterpret_cast<KnuthVarianceState*>(dst->ptr);
   double temp = 1 + state->count;
   double delta = src.val - state->mean;
@@ -104,6 +117,7 @@ void KnuthVarianceUpdate(FunctionContext* ctx, const DoubleVal& src, StringVal* 
 }
 
 void KnuthVarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
+  if (src.is_null || dst->is_null) return;
   KnuthVarianceState* src_state = reinterpret_cast<KnuthVarianceState*>(src.ptr);
   KnuthVarianceState* dst_state = reinterpret_cast<KnuthVarianceState*>(dst->ptr);
   if (src_state->count == 0) return;
@@ -124,6 +138,7 @@ StringVal KnuthVarianceSerialize(FunctionContext* ctx, const StringVal& state_sv
 // TODO: this can be used as the actual variance finalize function once the return type
 // doesn't need to match the intermediate type in Impala 2.0.
 DoubleVal KnuthVarianceFinalize(const StringVal& state_sv) {
+  if (state_sv.is_null) return DoubleVal::null();
   KnuthVarianceState* state = reinterpret_cast<KnuthVarianceState*>(state_sv.ptr);
   if (state->count == 0 || state->count == 1) return DoubleVal::null();
   double variance_n = state->m2 / state->count;
@@ -132,12 +147,14 @@ DoubleVal KnuthVarianceFinalize(const StringVal& state_sv) {
 }
 
 StringVal KnuthVarianceFinalize(FunctionContext* ctx, const StringVal& src) {
+  if (src.is_null) return StringVal::null();
   StringVal result =  ToStringVal(ctx, KnuthVarianceFinalize(src));
   ctx->Free(src.ptr);
   return result;
 }
 
 StringVal StdDevFinalize(FunctionContext* ctx, const StringVal& src) {
+  if (src.is_null) return StringVal::null();
   DoubleVal variance = KnuthVarianceFinalize(src);
   ctx->Free(src.ptr);
   if (variance.is_null) return StringVal::null();

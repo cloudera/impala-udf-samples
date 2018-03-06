@@ -88,12 +88,12 @@ StringVal StripVowels(FunctionContext* context, const StringVal& arg1) {
         shorter.append(1, (char)c);
     }
   }
-  // The modified string is stored in 'shorter', which is destroyed when this function
-  // ends. We need to make a string val and copy the contents.
-  // NB: Only the version of the ctor that takes a context object allocates new memory.
-  StringVal result(context, shorter.size());
-  memcpy(result.ptr, shorter.c_str(), shorter.size());
-  return result;
+  // The modified string 'shorter' is destroyed when this function ends. We need to copy
+  // the value into Impala-managed memory with StringVal::CopyFrom().
+  // NB: CopyFrom() will return a null StringVal and and fail the query if the allocation
+  // fails because of lack of memory.
+  return StringVal::CopyFrom(context,
+      reinterpret_cast<const uint8_t*>(shorter.c_str()), shorter.size());
 }
 
 // In the prepare function, allocate an IntVal and set it as the shared state. This
@@ -106,14 +106,17 @@ void ReturnConstantArgPrepare(
     context->SetError("This UDF can only be used with Impala 1.3 or higher");
     return;
   }
-  // TODO: this can be FRAGMENT_LOCAL once it's implemented since we're creating
-  // read-only state
+  // NB: the state is created once per thread. In this case it would also be valid to
+  // make it FRAGMENT_LOCAL since the data is read-only and it is safe to access from
+  // multiple threads.
   if (scope == FunctionContext::THREAD_LOCAL) {
     // Get the constant value of the 'const_val' argument in ReturnConstantArg(). If this
     // value is not constant, 'arg' will be NULL.
     IntVal* arg = reinterpret_cast<IntVal*>(context->GetConstantArg(0));
     // Allocate shared state to store 'arg' or a null IntVal
     IntVal* state = reinterpret_cast<IntVal*>(context->Allocate(sizeof(IntVal)));
+    // Allocations may fail. In that case return and let Impala cancel the query.
+    if (state == NULL) return;
     *state = (arg != NULL) ? *arg : IntVal::null();
     // Set the shared state in the function context
     context->SetFunctionState(scope, state);
@@ -133,7 +136,9 @@ void ReturnConstantArgClose(
   if (scope == FunctionContext::THREAD_LOCAL) {
     // Retreive and deallocate the shared state
     void* state = context->GetFunctionState(scope);
-    context->Free(reinterpret_cast<uint8_t*>(state));
-    context->SetFunctionState(scope, NULL);
+    if (state != NULL) {
+      context->Free(reinterpret_cast<uint8_t*>(state));
+      context->SetFunctionState(scope, NULL);
+    }
   }
 }
