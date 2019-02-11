@@ -16,6 +16,8 @@
 #include <assert.h>
 #include <sstream>
 
+#include "common.h"
+
 using namespace impala_udf;
 using namespace std;
 
@@ -38,20 +40,24 @@ StringVal ToStringVal<DoubleVal>(FunctionContext* context, const DoubleVal& val)
 // ---------------------------------------------------------------------------
 // This is a sample of implementing a COUNT aggregate function.
 // ---------------------------------------------------------------------------
+IMPALA_UDF_EXPORT
 void CountInit(FunctionContext* context, BigIntVal* val) {
   val->is_null = false;
   val->val = 0;
 }
 
+IMPALA_UDF_EXPORT
 void CountUpdate(FunctionContext* context, const IntVal& input, BigIntVal* val) {
   if (input.is_null) return;
   ++val->val;
 }
 
+IMPALA_UDF_EXPORT
 void CountMerge(FunctionContext* context, const BigIntVal& src, BigIntVal* dst) {
   dst->val += src.val;
 }
 
+IMPALA_UDF_EXPORT
 BigIntVal CountFinalize(FunctionContext* context, const BigIntVal& val) {
   return val;
 }
@@ -65,6 +71,7 @@ struct AvgStruct {
 };
 
 // Initialize the StringVal intermediate to a zero'd AvgStruct
+IMPALA_UDF_EXPORT
 void AvgInit(FunctionContext* context, StringVal* val) {
   val->ptr = context->Allocate(sizeof(AvgStruct));
   // Exit on failed allocation. Impala will fail the query after some time.
@@ -77,6 +84,7 @@ void AvgInit(FunctionContext* context, StringVal* val) {
   memset(val->ptr, 0, val->len);
 }
 
+IMPALA_UDF_EXPORT
 void AvgUpdate(FunctionContext* context, const DoubleVal& input, StringVal* val) {
   if (input.is_null) return;
   // Handle failed allocation. Impala will fail the query after some time.
@@ -87,6 +95,7 @@ void AvgUpdate(FunctionContext* context, const DoubleVal& input, StringVal* val)
   ++avg->count;
 }
 
+IMPALA_UDF_EXPORT
 void AvgMerge(FunctionContext* context, const StringVal& src, StringVal* dst) {
   if (src.is_null || dst->is_null) return;
   const AvgStruct* src_avg = reinterpret_cast<const AvgStruct*>(src.ptr);
@@ -100,6 +109,7 @@ void AvgMerge(FunctionContext* context, const StringVal& src, StringVal* dst) {
 // and free the original allocation. Note that memory allocated by the StringVal ctor is
 // not necessarily persisted across UDA function calls, which is why we don't use it in
 // AvgInit().
+IMPALA_UDF_EXPORT
 StringVal AvgSerialize(FunctionContext* context, const StringVal& val) {
   if (val.is_null) return StringVal::null();
   // Copy the value into Impala-managed memory with StringVal::CopyFrom().
@@ -110,6 +120,7 @@ StringVal AvgSerialize(FunctionContext* context, const StringVal& val) {
   return result;
 }
 
+IMPALA_UDF_EXPORT
 StringVal AvgFinalize(FunctionContext* context, const StringVal& val) {
   if (val.is_null) return StringVal::null();
   assert(val.len == sizeof(AvgStruct));
@@ -132,10 +143,12 @@ StringVal AvgFinalize(FunctionContext* context, const StringVal& val) {
 // Delimiter to use if the separator is NULL.
 static const StringVal DEFAULT_STRING_CONCAT_DELIM((uint8_t*)", ", 2);
 
+IMPALA_UDF_EXPORT
 void StringConcatInit(FunctionContext* context, StringVal* val) {
   val->is_null = true;
 }
 
+IMPALA_UDF_EXPORT
 void StringConcatUpdate(FunctionContext* context, const StringVal& str,
     const StringVal& separator, StringVal* result) {
   if (str.is_null) return;
@@ -167,6 +180,7 @@ void StringConcatUpdate(FunctionContext* context, const StringVal& str,
   result->len += str.len;
 }
 
+IMPALA_UDF_EXPORT
 void StringConcatMerge(FunctionContext* context, const StringVal& src, StringVal* dst) {
   if (src.is_null) return;
   StringConcatUpdate(context, src, ",", dst);
@@ -177,6 +191,7 @@ void StringConcatMerge(FunctionContext* context, const StringVal& src, StringVal
 // StringVal, and free the intermediate's memory. Note that memory allocated by the
 // StringVal ctor is not necessarily persisted across UDA function calls, which is why we
 // don't use it in StringConcatUpdate().
+IMPALA_UDF_EXPORT
 StringVal StringConcatSerialize(FunctionContext* context, const StringVal& val) {
   if (val.is_null) return val;
   // Copy the value into Impala-managed memory with StringVal::CopyFrom().
@@ -188,6 +203,7 @@ StringVal StringConcatSerialize(FunctionContext* context, const StringVal& val) 
 }
 
 // Same as StringConcatSerialize().
+IMPALA_UDF_EXPORT
 StringVal StringConcatFinalize(FunctionContext* context, const StringVal& val) {
   if (val.is_null) return val;
   // Copy the value into Impala-managed memory with StringVal::CopyFrom().
