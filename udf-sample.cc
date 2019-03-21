@@ -18,14 +18,17 @@
 #include <cmath>
 #include <string>
 
+#include "common.h"
+
 // In this sample we are declaring a UDF that adds two ints and returns an int.
+IMPALA_UDF_EXPORT
 IntVal AddUdf(FunctionContext* context, const IntVal& arg1, const IntVal& arg2) {
   if (arg1.is_null || arg2.is_null) return IntVal::null();
   return IntVal(arg1.val + arg2.val);
 }
 
 // Multiple UDFs can be defined in the same file
-
+IMPALA_UDF_EXPORT
 BooleanVal FuzzyEquals(FunctionContext* ctx, const DoubleVal& x, const DoubleVal& y) {
   const double EPSILON = 0.000001f;
   if (x.is_null || y.is_null) return BooleanVal::null();
@@ -35,6 +38,7 @@ BooleanVal FuzzyEquals(FunctionContext* ctx, const DoubleVal& x, const DoubleVal
 
 // Check if the input string has any occurrences of the letters (a,e,i,o,u).
 // Case-insensitive, so also detects (A,E,I,O,U).
+IMPALA_UDF_EXPORT
 BooleanVal HasVowels(FunctionContext* context, const StringVal& input) {
   if (input.is_null) return BooleanVal::null();
 
@@ -52,6 +56,7 @@ BooleanVal HasVowels(FunctionContext* context, const StringVal& input) {
 
 // Count all occurrences of the letters (a,e,i,o,u) in the input string.
 // Case-insensitive, so also counts (A,E,I,O,U).
+IMPALA_UDF_EXPORT
 IntVal CountVowels(FunctionContext* context, const StringVal& arg1) {
   if (arg1.is_null) return IntVal::null();
 
@@ -70,6 +75,7 @@ IntVal CountVowels(FunctionContext* context, const StringVal& arg1) {
 
 // Remove all occurrences of the letters (a,e,i,o,u) from the input string.
 // Case-insensitive, so also removes (A,E,I,O,U).
+IMPALA_UDF_EXPORT
 StringVal StripVowels(FunctionContext* context, const StringVal& arg1) {
   if (arg1.is_null) return StringVal::null();
 
@@ -99,6 +105,7 @@ StringVal StripVowels(FunctionContext* context, const StringVal& arg1) {
 // In the prepare function, allocate an IntVal and set it as the shared state. This
 // IntVal will be set to the result to be returned, i.e. the argument if it's constant
 // and null otherwise.
+IMPALA_UDF_EXPORT
 void ReturnConstantArgPrepare(
     FunctionContext* context, FunctionContext::FunctionStateScope scope) {
   // UDFs should check the version to avoid unimplemented functions from being called
@@ -124,6 +131,7 @@ void ReturnConstantArgPrepare(
 }
 
 // Retreives and returns the shared state set in the prepare function
+IMPALA_UDF_EXPORT
 IntVal ReturnConstantArg(FunctionContext* context, const IntVal& const_val) {
   IntVal* state = reinterpret_cast<IntVal*>(
       context->GetFunctionState(FunctionContext::THREAD_LOCAL));
@@ -131,6 +139,7 @@ IntVal ReturnConstantArg(FunctionContext* context, const IntVal& const_val) {
 }
 
 // Cleans up the shared state
+IMPALA_UDF_EXPORT
 void ReturnConstantArgClose(
     FunctionContext* context, FunctionContext::FunctionStateScope scope) {
   if (scope == FunctionContext::THREAD_LOCAL) {

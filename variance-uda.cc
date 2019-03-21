@@ -19,6 +19,7 @@
 #include <iostream>
 #include <impala_udf/udf.h>
 
+#include "common.h"
 #include "uda-sample.h"
 
 using namespace std;
@@ -38,6 +39,7 @@ struct VarianceState {
   int64_t count;
 };
 
+IMPALA_UDF_EXPORT
 void VarianceInit(FunctionContext* ctx, StringVal* dst) {
   dst->ptr = ctx->Allocate(sizeof(VarianceState));
   // Handle failed allocation. Impala will fail the query after some time.
@@ -50,6 +52,7 @@ void VarianceInit(FunctionContext* ctx, StringVal* dst) {
   memset(dst->ptr, 0, dst->len);
 }
 
+IMPALA_UDF_EXPORT
 void VarianceUpdate(FunctionContext* ctx, const DoubleVal& src, StringVal* dst) {
   if (src.is_null || dst->is_null) return;
   VarianceState* state = reinterpret_cast<VarianceState*>(dst->ptr);
@@ -58,6 +61,7 @@ void VarianceUpdate(FunctionContext* ctx, const DoubleVal& src, StringVal* dst) 
   ++state->count;
 }
 
+IMPALA_UDF_EXPORT
 void VarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
   if (src.is_null || dst->is_null) return;
   VarianceState* src_state = reinterpret_cast<VarianceState*>(src.ptr);
@@ -68,6 +72,7 @@ void VarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
 }
 
 // A serialize function is necessary to free the intermediate state allocation.
+IMPALA_UDF_EXPORT
 StringVal VarianceSerialize(FunctionContext* ctx, const StringVal& src) {
   if (src.is_null) return StringVal::null();
   StringVal result(ctx, src.len);
@@ -76,6 +81,7 @@ StringVal VarianceSerialize(FunctionContext* ctx, const StringVal& src) {
   return result;
 }
 
+IMPALA_UDF_EXPORT
 StringVal VarianceFinalize(FunctionContext* ctx, const StringVal& src) {
   if (src.is_null) return StringVal::null();
   VarianceState state = *reinterpret_cast<VarianceState*>(src.ptr);
@@ -93,6 +99,7 @@ struct KnuthVarianceState {
   double m2;
 };
 
+IMPALA_UDF_EXPORT
 void KnuthVarianceInit(FunctionContext* ctx, StringVal* dst) {
   dst->ptr = ctx->Allocate(sizeof(KnuthVarianceState));
   // Handle failed allocation. Impala will fail the query after some time.
@@ -105,6 +112,7 @@ void KnuthVarianceInit(FunctionContext* ctx, StringVal* dst) {
   memset(dst->ptr, 0, dst->len);
 }
 
+IMPALA_UDF_EXPORT
 void KnuthVarianceUpdate(FunctionContext* ctx, const DoubleVal& src, StringVal* dst) {
   if (src.is_null || dst->is_null) return;
   KnuthVarianceState* state = reinterpret_cast<KnuthVarianceState*>(dst->ptr);
@@ -116,6 +124,7 @@ void KnuthVarianceUpdate(FunctionContext* ctx, const DoubleVal& src, StringVal* 
   state->count = temp;
 }
 
+IMPALA_UDF_EXPORT
 void KnuthVarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
   if (src.is_null || dst->is_null) return;
   KnuthVarianceState* src_state = reinterpret_cast<KnuthVarianceState*>(src.ptr);
@@ -131,12 +140,14 @@ void KnuthVarianceMerge(FunctionContext* ctx, const StringVal& src, StringVal* d
 
 // Same as VarianceSerialize(). Create a wrapper function so automatic symbol resolution
 // still works.
+IMPALA_UDF_EXPORT
 StringVal KnuthVarianceSerialize(FunctionContext* ctx, const StringVal& state_sv) {
   return VarianceSerialize(ctx, state_sv);
 }
 
 // TODO: this can be used as the actual variance finalize function once the return type
 // doesn't need to match the intermediate type in Impala 2.0.
+IMPALA_UDF_EXPORT
 DoubleVal KnuthVarianceFinalize(const StringVal& state_sv) {
   if (state_sv.is_null) return DoubleVal::null();
   KnuthVarianceState* state = reinterpret_cast<KnuthVarianceState*>(state_sv.ptr);
@@ -146,6 +157,7 @@ DoubleVal KnuthVarianceFinalize(const StringVal& state_sv) {
   return DoubleVal(variance);
 }
 
+IMPALA_UDF_EXPORT
 StringVal KnuthVarianceFinalize(FunctionContext* ctx, const StringVal& src) {
   if (src.is_null) return StringVal::null();
   StringVal result =  ToStringVal(ctx, KnuthVarianceFinalize(src));
@@ -153,6 +165,7 @@ StringVal KnuthVarianceFinalize(FunctionContext* ctx, const StringVal& src) {
   return result;
 }
 
+IMPALA_UDF_EXPORT
 StringVal StdDevFinalize(FunctionContext* ctx, const StringVal& src) {
   if (src.is_null) return StringVal::null();
   DoubleVal variance = KnuthVarianceFinalize(src);

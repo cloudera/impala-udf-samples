@@ -19,6 +19,8 @@
 #include <iostream>
 #include <impala_udf/udf.h>
 
+#include "common.h"
+
 using namespace std;
 using namespace impala_udf;
 
@@ -31,6 +33,7 @@ using namespace impala_udf;
 // Precision taken from the paper. Doesn't seem to matter very much when between [6,12]
 const int HLL_PRECISION = 10;
 
+IMPALA_UDF_EXPORT
 void HllInit(FunctionContext* ctx, StringVal* dst) {
   int str_len = pow(2, HLL_PRECISION);
   dst->ptr = ctx->Allocate(str_len);
@@ -60,6 +63,7 @@ static uint64_t Hash(const IntVal& v) {
   return FnvHash(&v.val, sizeof(int32_t), FNV64_SEED);
 }
 
+IMPALA_UDF_EXPORT
 void HllUpdate(FunctionContext* ctx, const IntVal& src, StringVal* dst) {
   if (src.is_null) return;
   assert(dst != NULL);
@@ -75,6 +79,7 @@ void HllUpdate(FunctionContext* ctx, const IntVal& src, StringVal* dst) {
   }
 }
 
+IMPALA_UDF_EXPORT
 void HllMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
   assert(dst != NULL);
   if (src.is_null || dst->is_null) return;
@@ -85,6 +90,7 @@ void HllMerge(FunctionContext* ctx, const StringVal& src, StringVal* dst) {
   }
 }
 
+IMPALA_UDF_EXPORT
 const StringVal HllSerialize(FunctionContext* ctx, const StringVal& src) {
   if (src.is_null) return StringVal::null();
   // Copy intermediate state into memory owned by Impala and free allocated memory
@@ -94,6 +100,7 @@ const StringVal HllSerialize(FunctionContext* ctx, const StringVal& src) {
   return result;
 }
 
+IMPALA_UDF_EXPORT
 StringVal HllFinalize(FunctionContext* ctx, const StringVal& src) {
   if (src.is_null) return StringVal::null();
   assert(src.len == pow(2, HLL_PRECISION));
