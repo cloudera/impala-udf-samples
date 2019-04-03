@@ -1,4 +1,8 @@
-This repo contains sample user defined functions (UDFs) and user defined aggregate functions (UDAs) built against the Impala UDF/UDA framework.
+This repo contains user-defined functions (UDF) for Apache Impala to implement cryptographic functions in the query language. This is required when building a GDPR secured data lake with or without Data Vault 2.0. 
+
+  * GDPR: https://en.wikipedia.org/wiki/General_Data_Protection_Regulation
+  * Data Vault 2.0: https://www.scalefree.com
+
 
 To get started:
 
@@ -6,15 +10,10 @@ To get started:
 2. cmake .
 3. make
 
-The samples will get built to build/. This contains test executables that you can run locally, without the impala service installed as well as the shared object artifacts that we can run on impala.
+The crypto UDFs will get built to build/. This contains test executables that you can run locally, without the impala service installed as well as the shared object artifacts that we can run on impala.
 
 # How do I contribute code?
-You need to first sign and return an
-[ICLA](https://github.com/cloudera/native-toolchain/blob/icla/Cloudera%20ICLA_25APR2018.pdf)
-and
-[CCLA](https://github.com/cloudera/native-toolchain/blob/icla/Cloudera%20CCLA_25APR2018.pdf)
-before we can accept and redistribute your contribution. Once these are submitted you are
-free to start contributing to impala-udf-samples. Submit these to CLA@cloudera.com.
+FIXME
 
 ## Find
 We use Github issues to track bugs for this project. Find an issue that you would like to
@@ -23,7 +22,7 @@ assign it to yourself only if you intend to work on it shortly.
 
 It’s a good idea to discuss your intended approach on the issue. You are much more
 likely to have your patch reviewed and committed if you’ve already got buy-in from the
-impala-udf-samples community before you start.
+impala-crypto-udf community before you start.
 
 ## Fix
 Now start coding! As you are writing your patch, please keep the following things in mind:
@@ -42,10 +41,3 @@ maintenance releases.
 Finally, please write a good, clear commit message, with a short, descriptive title and
 a message that is exactly long enough to explain what the problem was, and how it was
 fixed.
-
-Please post your patch to the impala-udf-samples project at https://gerrit.cloudera.org
-for review. See
-[Impala's guide on using gerrit](https://cwiki.apache.org/confluence/display/IMPALA/Using+Gerrit+to+submit+and+review+patches)
-to submit and review patches for instructions on how to send patches to
-http://gerrit.cloudera.org, except make sure to send your patch to the impala-udf-samples
-project instead of Impala-ASF.
