@@ -2,8 +2,49 @@ This repo contains user-defined functions (UDF) for Apache Impala to implement c
 
   * GDPR: https://en.wikipedia.org/wiki/General_Data_Protection_Regulation
   * Data Vault 2.0: check out https://www.scalefree.com and https://blog.scalefree.com for details
+  
+# Supported Algorithms
+  
+This library is based on https://cryptopp.com/ and **intends** to implement the following functionality:
+
+## AES and AES candidates
+
+AES (Rijndael), RC6, MARS, Twofish, Serpent, CAST-256
+
+## other block ciphers
+
+ARIA, Blowfish, Camellia, CHAM, HIGHT, IDEA, Kalyna (128/256/512), LEA, SEED, RC5, SHACAL-2, SIMECK, SIMON (64/128), Skipjack, SPECK (64/128), Simeck, SM4,Threefish (256/512/1024), Triple-DES (DES-EDE2 and DES-EDE3), TEA, XTEA
+
+## block cipher modes of operation
+
+ECB, CBC, CBC ciphertext stealing (CTS), CFB, OFB, counter mode (CTR)
+
+## hash functions
+
+BLAKE2b, BLAKE2s, Keccack (F1600), SHA-1, SHA-2, SHA-3, SHAKE (128/256), SipHash, Tiger, RIPEMD (128/160/256/320), SM3, WHIRLPOOL
+
+## public-key cryptography
+
+RSA, DSA, Determinsitic DSA (RFC 6979), ElGamal, Nyberg-Rueppel (NR), Rabin-Williams (RW), EC-based German Digital Signature (ECGDSA), LUC, LUCELG, DLIES (variants of DHAES), ESIGN
+
+## padding schemes for public-key systems
+
+PKCS#1 v2.0, OAEP, PSS, PSSR, IEEE P1363 EMSA2 and EMSA5
+
+## elliptic curve cryptography
+
+ECDSA, Determinsitic ECDSA (RFC 6979), ed25519, ECGDSA, ECNR, ECIES, x25519, ECDH, ECMQV
+
+## insecure or obsolescent algorithms retained for backwards compatibility and historical value
+
+MD2, MD4, MD5, Panama Hash, DES, ARC4, SEAL 3.0, WAKE-OFB, DESX (DES-XEX3), RC2, SAFER, 3-WAY, GOST, SHARK, CAST-128, Square
+
+
+# Funding 
 
 This project is funded by Scalefree to support cryptographic functions in Impala. This is required in order to secure a data lake and support deletion of consumer records, a requirement of the GDPR. Transparent, filesystem-level encryption is not sufficient for this purpose / doesn't meet the legal requirements (consult your lawyers). 
+
+More information about GDPR & Data Vault 2.0 can be found in 
 
 To get started:
 
@@ -14,7 +55,9 @@ To get started:
 The crypto UDFs will get built to build/. This contains test executables that you can run locally, without the impala service installed as well as the shared object artifacts that we can run on impala.
 
 # How do I contribute code?
-FIXME
+Our goal is to implement as many functionality as possible from the Cryptopp as possible.
+
+Please send contributions to molschimke@scalefree.com
 
 ## Find
 We use Github issues to track bugs for this project. Find an issue that you would like to
