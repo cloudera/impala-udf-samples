@@ -1,8 +1,9 @@
 This repo contains user-defined functions (UDF) for Apache Impala to implement cryptographic functions in the query language. This is required when building a GDPR secured data lake with or without Data Vault 2.0. 
 
   * GDPR: https://en.wikipedia.org/wiki/General_Data_Protection_Regulation
-  * Data Vault 2.0: https://www.scalefree.com
+  * Data Vault 2.0: check out https://www.scalefree.com and https://blog.scalefree.com for details
 
+This project is funded by Scalefree to support cryptographic functions in Impala. This is required in order to secure a data lake and support deletion of consumer records, a requirement of the GDPR. Transparent, filesystem-level encryption is not sufficient for this purpose / doesn't meet the legal requirements (consult your lawyers). 
 
 To get started:
 
