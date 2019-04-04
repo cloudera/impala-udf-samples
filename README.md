@@ -44,7 +44,9 @@ MD2, MD4, MD5, Panama Hash, DES, ARC4, SEAL 3.0, WAKE-OFB, DESX (DES-XEX3), RC2,
 
 This project is funded by Scalefree to support cryptographic functions in Impala. This is required in order to secure a data lake and support deletion of consumer records, a requirement of the GDPR. Transparent, filesystem-level encryption is not sufficient for this purpose / doesn't meet the legal requirements (consult your lawyers). 
 
-More information about GDPR & Data Vault 2.0 can be found in 
+More information about GDPR & Data Vault 2.0 can be found in https://kb.scalefr.ee/lphesS
+
+# Get Started
 
 To get started:
 
