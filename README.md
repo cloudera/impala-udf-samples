@@ -46,6 +46,16 @@ This project is funded by Scalefree to support cryptographic functions in Impala
 
 More information about GDPR & Data Vault 2.0 can be found in https://kb.scalefr.ee/lphesS
 
+## About Scalefree
+
+Founded by Dan Linstedt and Michael Olschimke, Scalefree gives companies across the world the knowledge they need to leverage Big Data in an innovative way. Building upon its name, the services offered by Scalefree allow companies to build comprehensive Business Intelligence solutions without the confining and stifling concern of scalability in the long term. 
+
+That said, the focus of the company remains growing its consulting and partnership programs in which organizations from a variety of countries as well as industries can learn to leverage their own Business Intelligence solutions tailored to their own venture.
+
+## About Data Vault 2.0
+
+Designed and developed for branches of the US government, Data Vault 2.0 reshapes the way individuals and organization can utilize Big Data within their own businesses. Though its first iteration was developed for the large data load of a government agency, the newest version of Data Vault 2.0 is specifically designed to be easily implemented in a variety of capacities, leading to its success in the financial, governmental, and automotive, to name but a few, sectors across the world.
+
 # Get Started
 
 To get started:
