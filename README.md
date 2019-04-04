@@ -67,7 +67,7 @@ To get started:
 The crypto UDFs will get built to build/. This contains test executables that you can run locally, without the impala service installed as well as the shared object artifacts that we can run on impala.
 
 # How do I contribute code?
-Our goal is to implement as many functionality as possible from the Cryptopp as possible.
+Our goal is to implement as many functionality as possible from the https://cryptopp.com/ as possible.
 
 Please send contributions to molschimke@scalefree.com
 
