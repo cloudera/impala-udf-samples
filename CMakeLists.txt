@@ -41,21 +41,20 @@ function(COMPILE_TO_IR SRC_FILE)
   add_custom_target(${BASE_NAME}-ir ALL DEPENDS ${OUTPUT_FILE})
 endfunction(COMPILE_TO_IR)
 
-# Build the UDA/UDFs into a shared library.
-add_library(udfsample SHARED udf-sample.cc)
-add_library(udasample SHARED uda-sample.cc hyperloglog-uda.cc variance-uda.cc)
+# Build the UDFs into a shared library.
+add_library(udfcrypto SHARED udf-crypto.cc)
+set(CRYPTOPP_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/cryptopp")
+set(CRYPTOPP_LIBS "${CMAKE_SOURCE_DIR}/cryptopp/libcryptopp.a")
+include_directories(${CRYPTOPP_INCLUDE_DIR})
+target_link_libraries(udfcrypto ${CRYPTOPP_LIBS})
 
-# Custom targest to cross compile UDA/UDF to ir
+# Custom targest to cross compile UDF to ir
 if (CLANG_EXECUTABLE)
-  COMPILE_TO_IR(udf-sample.cc )
-  COMPILE_TO_IR(uda-sample.cc )
+  COMPILE_TO_IR(udf-crypto.cc )
 endif(CLANG_EXECUTABLE)
 
-# This is an example of how to use the test harness to help develop UDF and UDAs.
-target_link_libraries(udfsample ImpalaUdf)
-target_link_libraries(udasample ImpalaUdf)
-add_executable(udf-sample-test udf-sample-test.cc)
-target_link_libraries(udf-sample-test udfsample)
-add_executable(uda-sample-test uda-sample-test.cc)
-target_link_libraries(uda-sample-test udasample)
+# This is an example of how to use the test harness to help develop UDFs.
+target_link_libraries(udfcrypto ImpalaUdf)
+add_executable(udf-crypto-test udf-crypto-test.cc)
+target_link_libraries(udf-crypto-test udfcrypto)
 
