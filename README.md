@@ -1,4 +1,62 @@
-This repo contains sample user defined functions (UDFs) and user defined aggregate functions (UDAs) built against the Impala UDF/UDA framework.
+This repo contains user-defined functions (UDF) for Apache Impala to implement cryptographic functions in the query language. This is required when building a GDPR secured data lake with or without Data Vault 2.0. 
+
+  * GDPR: https://en.wikipedia.org/wiki/General_Data_Protection_Regulation
+  * Data Vault 2.0: check out https://www.scalefree.com and https://blog.scalefree.com for details
+  
+# Supported Algorithms
+  
+This library is based on https://cryptopp.com/ and **intends** to implement the following functionality:
+
+## AES and AES candidates
+
+AES (Rijndael), RC6, MARS, Twofish, Serpent, CAST-256
+
+## other block ciphers
+
+ARIA, Blowfish, Camellia, CHAM, HIGHT, IDEA, Kalyna (128/256/512), LEA, SEED, RC5, SHACAL-2, SIMECK, SIMON (64/128), Skipjack, SPECK (64/128), Simeck, SM4,Threefish (256/512/1024), Triple-DES (DES-EDE2 and DES-EDE3), TEA, XTEA
+
+## block cipher modes of operation
+
+ECB, CBC, CBC ciphertext stealing (CTS), CFB, OFB, counter mode (CTR)
+
+## hash functions
+
+BLAKE2b, BLAKE2s, Keccack (F1600), SHA-1, SHA-2, SHA-3, SHAKE (128/256), SipHash, Tiger, RIPEMD (128/160/256/320), SM3, WHIRLPOOL
+
+## public-key cryptography
+
+RSA, DSA, Determinsitic DSA (RFC 6979), ElGamal, Nyberg-Rueppel (NR), Rabin-Williams (RW), EC-based German Digital Signature (ECGDSA), LUC, LUCELG, DLIES (variants of DHAES), ESIGN
+
+## padding schemes for public-key systems
+
+PKCS#1 v2.0, OAEP, PSS, PSSR, IEEE P1363 EMSA2 and EMSA5
+
+## elliptic curve cryptography
+
+ECDSA, Determinsitic ECDSA (RFC 6979), ed25519, ECGDSA, ECNR, ECIES, x25519, ECDH, ECMQV
+
+## insecure or obsolescent algorithms retained for backwards compatibility and historical value
+
+MD2, MD4, MD5, Panama Hash, DES, ARC4, SEAL 3.0, WAKE-OFB, DESX (DES-XEX3), RC2, SAFER, 3-WAY, GOST, SHARK, CAST-128, Square
+
+
+# Funding 
+
+This project is funded by Scalefree to support cryptographic functions in Impala. This is required in order to secure a data lake and support deletion of consumer records, a requirement of the GDPR. Transparent, filesystem-level encryption is not sufficient for this purpose / doesn't meet the legal requirements (consult your lawyers). 
+
+More information about GDPR & Data Vault 2.0 can be found in https://kb.scalefr.ee/lphesS
+
+## About Scalefree
+
+Founded by Dan Linstedt and Michael Olschimke, Scalefree gives companies across the world the knowledge they need to leverage Big Data in an innovative way. Building upon its name, the services offered by Scalefree allow companies to build comprehensive Business Intelligence solutions without the confining and stifling concern of scalability in the long term. 
+
+That said, the focus of the company remains growing its consulting and partnership programs in which organizations from a variety of countries as well as industries can learn to leverage their own Business Intelligence solutions tailored to their own venture.
+
+## About Data Vault 2.0
+
+Designed and developed for branches of the US government, Data Vault 2.0 reshapes the way individuals and organization can utilize Big Data within their own businesses. Though its first iteration was developed for the large data load of a government agency, the newest version of Data Vault 2.0 is specifically designed to be easily implemented in a variety of capacities, leading to its success in the financial, governmental, and automotive, to name but a few, sectors across the world.
+
+# Get Started
 
 To get started:
 
@@ -6,15 +64,12 @@ To get started:
 2. cmake .
 3. make
 
-The samples will get built to build/. This contains test executables that you can run locally, without the impala service installed as well as the shared object artifacts that we can run on impala.
+The crypto UDFs will get built to build/. This contains test executables that you can run locally, without the impala service installed as well as the shared object artifacts that we can run on impala.
 
 # How do I contribute code?
-You need to first sign and return an
-[ICLA](https://github.com/cloudera/native-toolchain/blob/icla/Cloudera%20ICLA_25APR2018.pdf)
-and
-[CCLA](https://github.com/cloudera/native-toolchain/blob/icla/Cloudera%20CCLA_25APR2018.pdf)
-before we can accept and redistribute your contribution. Once these are submitted you are
-free to start contributing to impala-udf-samples. Submit these to CLA@cloudera.com.
+Our goal is to implement as many functionality as possible from the https://cryptopp.com/ as possible.
+
+Please send contributions to molschimke@scalefree.com
 
 ## Find
 We use Github issues to track bugs for this project. Find an issue that you would like to
@@ -23,7 +78,7 @@ assign it to yourself only if you intend to work on it shortly.
 
 It’s a good idea to discuss your intended approach on the issue. You are much more
 likely to have your patch reviewed and committed if you’ve already got buy-in from the
-impala-udf-samples community before you start.
+impala-crypto-udf community before you start.
 
 ## Fix
 Now start coding! As you are writing your patch, please keep the following things in mind:
@@ -42,10 +97,3 @@ maintenance releases.
 Finally, please write a good, clear commit message, with a short, descriptive title and
 a message that is exactly long enough to explain what the problem was, and how it was
 fixed.
-
-Please post your patch to the impala-udf-samples project at https://gerrit.cloudera.org
-for review. See
-[Impala's guide on using gerrit](https://cwiki.apache.org/confluence/display/IMPALA/Using+Gerrit+to+submit+and+review+patches)
-to submit and review patches for instructions on how to send patches to
-http://gerrit.cloudera.org, except make sure to send your patch to the impala-udf-samples
-project instead of Impala-ASF.
