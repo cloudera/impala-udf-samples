@@ -2,7 +2,10 @@ This repo contains sample user defined functions (UDFs) and user defined aggrega
 
 To get started:
 
-1. Install the impala udf development package: <http://archive.cloudera.com/cdh5/>
+1. Install the impala udf development package for your distribution and Impala version,
+   generally called impala-udf-devel or impala-udf-dev. This package is available
+   in the various Cloudera package repositories under: <http://archive.cloudera.com/cdh5/>
+   for CDH5 and <http://archive.cloudera.com/cdh6/> for CDH6.
 2. cmake .
 3. make
 
