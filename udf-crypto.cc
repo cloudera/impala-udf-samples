@@ -20,146 +20,28 @@
 #include "hex.h"
 #include "sha.h"
 #include "sha3.h"
+#include "keccak.h"
+#include "ripemd.h"
+#include "tiger.h"
+#include "whrlpool.h"
+#include "sm3.h"
+#include "blake2.h"
 #define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
 #include <md5.h>
 #include "aes.h"
+#include "des.h"
+#include "blowfish.h"
+#include "twofish.h"
+#include "serpent.h"
+#include "rc6.h"
+#include "idea.h"
+#include "camellia.h"
+#include "skipjack.h"
+#include "tea.h"
+#include "sm4.h"
 #include "modes.h"
 
 #include "common.h"
-
-// In this sample we are declaring a UDF that adds two ints and returns an int.
-IMPALA_UDF_EXPORT
-IntVal AddUdf(FunctionContext* context, const IntVal& arg1, const IntVal& arg2) {
-  if (arg1.is_null || arg2.is_null) return IntVal::null();
-  return IntVal(arg1.val + arg2.val);
-}
-
-// Multiple UDFs can be defined in the same file
-IMPALA_UDF_EXPORT
-BooleanVal FuzzyEquals(FunctionContext* ctx, const DoubleVal& x, const DoubleVal& y) {
-  const double EPSILON = 0.000001f;
-  if (x.is_null || y.is_null) return BooleanVal::null();
-  double delta = fabs(x.val - y.val);
-  return BooleanVal(delta < EPSILON);
-}
-
-// Check if the input string has any occurrences of the letters (a,e,i,o,u).
-// Case-insensitive, so also detects (A,E,I,O,U).
-IMPALA_UDF_EXPORT
-BooleanVal HasVowels(FunctionContext* context, const StringVal& input) {
-  if (input.is_null) return BooleanVal::null();
-
-  int index;
-  uint8_t *ptr;
-
-  for (ptr = input.ptr, index = 0; index < input.len; index++, ptr++) {
-    uint8_t c = tolower(*ptr);
-    if (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u') {
-      return BooleanVal(true);
-    }
-  }
-  return BooleanVal(false);
-}
-
-// Count all occurrences of the letters (a,e,i,o,u) in the input string.
-// Case-insensitive, so also counts (A,E,I,O,U).
-IMPALA_UDF_EXPORT
-IntVal CountVowels(FunctionContext* context, const StringVal& arg1) {
-  if (arg1.is_null) return IntVal::null();
-
-  int count;
-  int index;
-  uint8_t *ptr;
-
-  for (ptr = arg1.ptr, count = 0, index = 0; index < arg1.len; index++, ptr++) {
-    uint8_t c = tolower(*ptr);
-    if (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u') {
-      count++;
-    }
-  }
-  return IntVal(count);
-}
-
-// Remove all occurrences of the letters (a,e,i,o,u) from the input string.
-// Case-insensitive, so also removes (A,E,I,O,U).
-IMPALA_UDF_EXPORT
-StringVal StripVowels(FunctionContext* context, const StringVal& arg1) {
-  if (arg1.is_null) return StringVal::null();
-
-  int index;
-  std::string original((const char *)arg1.ptr,arg1.len);
-  std::string shorter("");
-
-  for (index = 0; index < original.length(); index++) {
-    uint8_t c = original[index];
-    uint8_t l = tolower(c);
-
-    if (l == 'a' || l == 'e' || l == 'i' || l == 'o' || l == 'u') {
-      continue;
-    }
-    else {
-        shorter.append(1, (char)c);
-    }
-  }
-  // The modified string 'shorter' is destroyed when this function ends. We need to copy
-  // the value into Impala-managed memory with StringVal::CopyFrom().
-  // NB: CopyFrom() will return a null StringVal and and fail the query if the allocation
-  // fails because of lack of memory.
-  return StringVal::CopyFrom(context,
-      reinterpret_cast<const uint8_t*>(shorter.c_str()), shorter.size());
-}
-
-// In the prepare function, allocate an IntVal and set it as the shared state. This
-// IntVal will be set to the result to be returned, i.e. the argument if it's constant
-// and null otherwise.
-IMPALA_UDF_EXPORT
-void ReturnConstantArgPrepare(
-    FunctionContext* context, FunctionContext::FunctionStateScope scope) {
-  // UDFs should check the version to avoid unimplemented functions from being called
-  if (context->version() < FunctionContext::v1_3) {
-    context->SetError("This UDF can only be used with Impala 1.3 or higher");
-    return;
-  }
-  // NB: the state is created once per thread. In this case it would also be valid to
-  // make it FRAGMENT_LOCAL since the data is read-only and it is safe to access from
-  // multiple threads.
-  if (scope == FunctionContext::THREAD_LOCAL) {
-    // Get the constant value of the 'const_val' argument in ReturnConstantArg(). If this
-    // value is not constant, 'arg' will be NULL.
-    IntVal* arg = reinterpret_cast<IntVal*>(context->GetConstantArg(0));
-    // Allocate shared state to store 'arg' or a null IntVal
-    IntVal* state = reinterpret_cast<IntVal*>(context->Allocate(sizeof(IntVal)));
-    // Allocations may fail. In that case return and let Impala cancel the query.
-    if (state == NULL) return;
-    *state = (arg != NULL) ? *arg : IntVal::null();
-    // Set the shared state in the function context
-    context->SetFunctionState(scope, state);
-  }
-}
-
-// Retreives and returns the shared state set in the prepare function
-IMPALA_UDF_EXPORT
-IntVal ReturnConstantArg(FunctionContext* context, const IntVal& const_val) {
-  IntVal* state = reinterpret_cast<IntVal*>(
-      context->GetFunctionState(FunctionContext::THREAD_LOCAL));
-  return *state;
-}
-
-// Cleans up the shared state
-IMPALA_UDF_EXPORT
-void ReturnConstantArgClose(
-    FunctionContext* context, FunctionContext::FunctionStateScope scope) {
-  if (scope == FunctionContext::THREAD_LOCAL) {
-    // Retreive and deallocate the shared state
-    void* state = context->GetFunctionState(scope);
-    if (state != NULL) {
-      context->Free(reinterpret_cast<uint8_t*>(state));
-      context->SetFunctionState(scope, NULL);
-    }
-  }
-}
-
-
 
 IMPALA_UDF_EXPORT
 StringVal SHA1(FunctionContext* context, const StringVal& arg1) {
@@ -273,6 +155,253 @@ StringVal SHA3(FunctionContext* context, const StringVal& arg1) {
       reinterpret_cast<const uint8_t*>(encoded.c_str()), encoded.size());
 }
 
+IMPALA_UDF_EXPORT
+StringVal RIPEMD128(FunctionContext* context, const StringVal& arg1) {
+  if (arg1.is_null) return StringVal::null();
+  CryptoPP::byte digest[CryptoPP::RIPEMD128::DIGESTSIZE];
+  CryptoPP::RIPEMD128().CalculateDigest(digest, arg1.ptr, arg1.len);
+  std::string encoded;
+
+  CryptoPP::StringSource ss(digest, sizeof(digest), true,
+      new CryptoPP::HexEncoder(
+          new CryptoPP::StringSink(encoded)
+      ) // HexEncoder
+  ); // StringSource
+  return StringVal::CopyFrom(context,
+      reinterpret_cast<const uint8_t*>(encoded.c_str()), encoded.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal RIPEMD160(FunctionContext* context, const StringVal& arg1) {
+  if (arg1.is_null) return StringVal::null();
+  CryptoPP::byte digest[CryptoPP::RIPEMD160::DIGESTSIZE];
+  CryptoPP::RIPEMD160().CalculateDigest(digest, arg1.ptr, arg1.len);
+  std::string encoded;
+
+  CryptoPP::StringSource ss(digest, sizeof(digest), true,
+      new CryptoPP::HexEncoder(
+          new CryptoPP::StringSink(encoded)
+      ) // HexEncoder
+  ); // StringSource
+  return StringVal::CopyFrom(context,
+      reinterpret_cast<const uint8_t*>(encoded.c_str()), encoded.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal RIPEMD256(FunctionContext* context, const StringVal& arg1) {
+  if (arg1.is_null) return StringVal::null();
+  CryptoPP::byte digest[CryptoPP::RIPEMD256::DIGESTSIZE];
+  CryptoPP::RIPEMD256().CalculateDigest(digest, arg1.ptr, arg1.len);
+  std::string encoded;
+
+  CryptoPP::StringSource ss(digest, sizeof(digest), true,
+      new CryptoPP::HexEncoder(
+          new CryptoPP::StringSink(encoded)
+      ) // HexEncoder
+  ); // StringSource
+  return StringVal::CopyFrom(context,
+      reinterpret_cast<const uint8_t*>(encoded.c_str()), encoded.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal RIPEMD320(FunctionContext* context, const StringVal& arg1) {
+  if (arg1.is_null) return StringVal::null();
+  CryptoPP::byte digest[CryptoPP::RIPEMD320::DIGESTSIZE];
+  CryptoPP::RIPEMD320().CalculateDigest(digest, arg1.ptr, arg1.len);
+  std::string encoded;
+
+  CryptoPP::StringSource ss(digest, sizeof(digest), true,
+      new CryptoPP::HexEncoder(
+          new CryptoPP::StringSink(encoded)
+      ) // HexEncoder
+  ); // StringSource
+  return StringVal::CopyFrom(context,
+      reinterpret_cast<const uint8_t*>(encoded.c_str()), encoded.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal Tiger(FunctionContext* context, const StringVal& arg1) {
+  if (arg1.is_null) return StringVal::null();
+  CryptoPP::byte digest[CryptoPP::Tiger::DIGESTSIZE];
+  CryptoPP::Tiger().CalculateDigest(digest, arg1.ptr, arg1.len);
+  std::string encoded;
+
+  CryptoPP::StringSource ss(digest, sizeof(digest), true,
+      new CryptoPP::HexEncoder(
+          new CryptoPP::StringSink(encoded)
+      ) // HexEncoder
+  ); // StringSource
+  return StringVal::CopyFrom(context,
+      reinterpret_cast<const uint8_t*>(encoded.c_str()), encoded.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal Whirlpool(FunctionContext* context, const StringVal& arg1) {
+  if (arg1.is_null) return StringVal::null();
+  CryptoPP::byte digest[CryptoPP::Whirlpool::DIGESTSIZE];
+  CryptoPP::Whirlpool().CalculateDigest(digest, arg1.ptr, arg1.len);
+  std::string encoded;
+
+  CryptoPP::StringSource ss(digest, sizeof(digest), true,
+      new CryptoPP::HexEncoder(
+          new CryptoPP::StringSink(encoded)
+      ) // HexEncoder
+  ); // StringSource
+  return StringVal::CopyFrom(context,
+      reinterpret_cast<const uint8_t*>(encoded.c_str()), encoded.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal SM3(FunctionContext* context, const StringVal& arg1) {
+  if (arg1.is_null) return StringVal::null();
+  CryptoPP::byte digest[CryptoPP::SM3::DIGESTSIZE];
+  CryptoPP::SM3().CalculateDigest(digest, arg1.ptr, arg1.len);
+  std::string encoded;
+
+  CryptoPP::StringSource ss(digest, sizeof(digest), true,
+      new CryptoPP::HexEncoder(
+          new CryptoPP::StringSink(encoded)
+      ) // HexEncoder
+  ); // StringSource
+  return StringVal::CopyFrom(context,
+      reinterpret_cast<const uint8_t*>(encoded.c_str()), encoded.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal Keccak224(FunctionContext* context, const StringVal& arg1) {
+  if (arg1.is_null) return StringVal::null();
+  CryptoPP::byte digest[CryptoPP::Keccak_224::DIGESTSIZE];
+  CryptoPP::Keccak_224().CalculateDigest(digest, arg1.ptr, arg1.len);
+  std::string encoded;
+
+  CryptoPP::StringSource ss(digest, sizeof(digest), true,
+      new CryptoPP::HexEncoder(
+          new CryptoPP::StringSink(encoded)
+      ) // HexEncoder
+  ); // StringSource
+  return StringVal::CopyFrom(context,
+      reinterpret_cast<const uint8_t*>(encoded.c_str()), encoded.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal Keccak256(FunctionContext* context, const StringVal& arg1) {
+  if (arg1.is_null) return StringVal::null();
+  CryptoPP::byte digest[CryptoPP::Keccak_256::DIGESTSIZE];
+  CryptoPP::Keccak_256().CalculateDigest(digest, arg1.ptr, arg1.len);
+  std::string encoded;
+
+  CryptoPP::StringSource ss(digest, sizeof(digest), true,
+      new CryptoPP::HexEncoder(
+          new CryptoPP::StringSink(encoded)
+      ) // HexEncoder
+  ); // StringSource
+  return StringVal::CopyFrom(context,
+      reinterpret_cast<const uint8_t*>(encoded.c_str()), encoded.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal Keccak384(FunctionContext* context, const StringVal& arg1) {
+  if (arg1.is_null) return StringVal::null();
+  CryptoPP::byte digest[CryptoPP::Keccak_384::DIGESTSIZE];
+  CryptoPP::Keccak_384().CalculateDigest(digest, arg1.ptr, arg1.len);
+  std::string encoded;
+
+  CryptoPP::StringSource ss(digest, sizeof(digest), true,
+      new CryptoPP::HexEncoder(
+          new CryptoPP::StringSink(encoded)
+      ) // HexEncoder
+  ); // StringSource
+  return StringVal::CopyFrom(context,
+      reinterpret_cast<const uint8_t*>(encoded.c_str()), encoded.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal Keccak512(FunctionContext* context, const StringVal& arg1) {
+  if (arg1.is_null) return StringVal::null();
+  CryptoPP::byte digest[CryptoPP::Keccak_512::DIGESTSIZE];
+  CryptoPP::Keccak_512().CalculateDigest(digest, arg1.ptr, arg1.len);
+  std::string encoded;
+
+  CryptoPP::StringSource ss(digest, sizeof(digest), true,
+      new CryptoPP::HexEncoder(
+          new CryptoPP::StringSink(encoded)
+      ) // HexEncoder
+  ); // StringSource
+  return StringVal::CopyFrom(context,
+      reinterpret_cast<const uint8_t*>(encoded.c_str()), encoded.size());
+}
+
+StringVal BLAKE2s(FunctionContext* context, const StringVal& arg1, int digestSize) {
+  if (arg1.is_null) return StringVal::null();
+  CryptoPP::byte digest[digestSize];
+  CryptoPP::BLAKE2s(false, digestSize).CalculateDigest(digest, arg1.ptr, arg1.len);
+  std::string encoded;
+
+  CryptoPP::StringSource ss(digest, sizeof(digest), true,
+      new CryptoPP::HexEncoder(
+          new CryptoPP::StringSink(encoded)
+      ) // HexEncoder
+  ); // StringSource
+  return StringVal::CopyFrom(context,
+      reinterpret_cast<const uint8_t*>(encoded.c_str()), encoded.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal BLAKE2s128(FunctionContext* context, const StringVal& arg1) {
+  return BLAKE2s(context, arg1, 128 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal BLAKE2s160(FunctionContext* context, const StringVal& arg1) {
+  return BLAKE2s(context, arg1, 160 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal BLAKE2s224(FunctionContext* context, const StringVal& arg1) {
+  return BLAKE2s(context, arg1, 224 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal BLAKE2s256(FunctionContext* context, const StringVal& arg1) {
+  return BLAKE2s(context, arg1, 256 / 8);
+}
+
+StringVal BLAKE2b(FunctionContext* context, const StringVal& arg1, int digestSize) {
+  if (arg1.is_null) return StringVal::null();
+  CryptoPP::byte digest[digestSize];
+  CryptoPP::BLAKE2b(false, digestSize).CalculateDigest(digest, arg1.ptr, arg1.len);
+  std::string encoded;
+
+  CryptoPP::StringSource ss(digest, sizeof(digest), true,
+      new CryptoPP::HexEncoder(
+          new CryptoPP::StringSink(encoded)
+      ) // HexEncoder
+  ); // StringSource
+  return StringVal::CopyFrom(context,
+      reinterpret_cast<const uint8_t*>(encoded.c_str()), encoded.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal BLAKE2b224(FunctionContext* context, const StringVal& arg1) {
+  return BLAKE2b(context, arg1, 224 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal BLAKE2b256(FunctionContext* context, const StringVal& arg1) {
+  return BLAKE2b(context, arg1, 256 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal BLAKE2b384(FunctionContext* context, const StringVal& arg1) {
+  return BLAKE2b(context, arg1, 384 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal BLAKE2b512(FunctionContext* context, const StringVal& arg1) {
+  return BLAKE2b(context, arg1, 512 / 8);
+}
+
+
 StringVal AESDecryptWithKeySize(FunctionContext* context, const StringVal& arg1, const StringVal& arg2, int keySize) {
   // return null for empty string
   if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
@@ -375,4 +504,1020 @@ IMPALA_UDF_EXPORT
 StringVal AES256Encrypt(FunctionContext* context, const StringVal& arg1,
     const StringVal& arg2) {
   return AESEncryptWithKeySize(context, arg1, arg2, 256 / 8);
+}
+
+
+IMPALA_UDF_EXPORT
+StringVal TDEA2Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = CryptoPP::DES_EDE2::DEFAULT_KEYLENGTH;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::DES_EDE2>::Decryption d;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::DES_EDE2::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::DES_EDE2::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    d.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(d,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal TDEA2Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = CryptoPP::DES_EDE2::DEFAULT_KEYLENGTH;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::DES_EDE2>::Encryption e;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::DES_EDE2::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::DES_EDE2::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    e.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(e,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal TDEA3Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = CryptoPP::DES_EDE3::DEFAULT_KEYLENGTH;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::DES_EDE3>::Decryption d;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::DES_EDE3::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::DES_EDE3::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    d.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(d,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal TDEA3Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = CryptoPP::DES_EDE3::DEFAULT_KEYLENGTH;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::DES_EDE3>::Encryption e;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::DES_EDE3::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::DES_EDE3::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    e.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(e,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal BlowfishDecrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = arg2.len;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || keySize > CryptoPP::Blowfish::MAX_KEYLENGTH || keySize < CryptoPP::Blowfish::MIN_KEYLENGTH) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::Blowfish>::Decryption d;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::Blowfish::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::Blowfish::BLOCKSIZE);
+    for (int i = 0; i < keySize; ++i) key[i % keySize] ^= arg2.ptr[i];
+    d.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(d,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal BlowfishEncrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = arg2.len;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || keySize > CryptoPP::Blowfish::MAX_KEYLENGTH || keySize < CryptoPP::Blowfish::MIN_KEYLENGTH) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::Blowfish>::Encryption e;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::Blowfish::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::Blowfish::BLOCKSIZE);
+    for (int i = 0; i < keySize; ++i) key[i % keySize] ^= arg2.ptr[i];
+    e.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(e,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+
+StringVal TwofishDecryptWithKeySize(FunctionContext* context, const StringVal& arg1, const StringVal& arg2, int keySize) {
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::Twofish>::Decryption d;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::Twofish::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::Twofish::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    d.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(d,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+StringVal TwofishEncryptWithKeySize(FunctionContext* context, const StringVal& arg1, const StringVal& arg2, int keySize) {
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::Twofish>::Encryption e;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::Twofish::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::Twofish::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    e.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(e,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal Twofish128Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return TwofishDecryptWithKeySize(context, arg1, arg2, 128 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Twofish128Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return TwofishEncryptWithKeySize(context, arg1, arg2, 128 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Twofish192Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return TwofishDecryptWithKeySize(context, arg1, arg2, 192 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Twofish192Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return TwofishEncryptWithKeySize(context, arg1, arg2, 192 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Twofish256Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return TwofishDecryptWithKeySize(context, arg1, arg2, 256 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Twofish256Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return TwofishEncryptWithKeySize(context, arg1, arg2, 256 / 8);
+}
+
+
+StringVal SerpentDecryptWithKeySize(FunctionContext* context, const StringVal& arg1, const StringVal& arg2, int keySize) {
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::Serpent>::Decryption d;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::Serpent::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::Serpent::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    d.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(d,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+StringVal SerpentEncryptWithKeySize(FunctionContext* context, const StringVal& arg1, const StringVal& arg2, int keySize) {
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::Serpent>::Encryption e;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::Serpent::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::Serpent::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    e.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(e,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal Serpent128Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return SerpentDecryptWithKeySize(context, arg1, arg2, 128 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Serpent128Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return SerpentEncryptWithKeySize(context, arg1, arg2, 128 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Serpent192Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return SerpentDecryptWithKeySize(context, arg1, arg2, 192 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Serpent192Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return SerpentEncryptWithKeySize(context, arg1, arg2, 192 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Serpent256Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return SerpentDecryptWithKeySize(context, arg1, arg2, 256 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Serpent256Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return SerpentEncryptWithKeySize(context, arg1, arg2, 256 / 8);
+}
+
+
+StringVal RC6_DecryptWithKeySize(FunctionContext* context, const StringVal& arg1, const StringVal& arg2, int keySize) {
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::RC6>::Decryption d;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::RC6::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::RC6::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    d.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(d,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+StringVal RC6_EncryptWithKeySize(FunctionContext* context, const StringVal& arg1, const StringVal& arg2, int keySize) {
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::RC6>::Encryption e;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::RC6::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::RC6::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    e.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(e,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal RC6_128Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return RC6_DecryptWithKeySize(context, arg1, arg2, 128 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal RC6_128Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return RC6_EncryptWithKeySize(context, arg1, arg2, 128 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal RC6_192Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return RC6_DecryptWithKeySize(context, arg1, arg2, 192 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal RC6_192Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return RC6_EncryptWithKeySize(context, arg1, arg2, 192 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal RC6_256Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return RC6_DecryptWithKeySize(context, arg1, arg2, 256 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal RC6_256Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return RC6_EncryptWithKeySize(context, arg1, arg2, 256 / 8);
+}
+
+
+StringVal CamelliaDecryptWithKeySize(FunctionContext* context, const StringVal& arg1, const StringVal& arg2, int keySize) {
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::Camellia>::Decryption d;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::Camellia::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::Camellia::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    d.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(d,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+StringVal CamelliaEncryptWithKeySize(FunctionContext* context, const StringVal& arg1, const StringVal& arg2, int keySize) {
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::Camellia>::Encryption e;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::Camellia::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::Camellia::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    e.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(e,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal Camellia128Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return CamelliaDecryptWithKeySize(context, arg1, arg2, 128 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Camellia128Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return CamelliaEncryptWithKeySize(context, arg1, arg2, 128 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Camellia192Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return CamelliaDecryptWithKeySize(context, arg1, arg2, 192 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Camellia192Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return CamelliaEncryptWithKeySize(context, arg1, arg2, 192 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Camellia256Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return CamelliaDecryptWithKeySize(context, arg1, arg2, 256 / 8);
+}
+
+IMPALA_UDF_EXPORT
+StringVal Camellia256Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  return CamelliaEncryptWithKeySize(context, arg1, arg2, 256 / 8);
+}
+
+
+IMPALA_UDF_EXPORT
+StringVal IDEA_Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = CryptoPP::IDEA::DEFAULT_KEYLENGTH;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::IDEA>::Decryption d;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::IDEA::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::IDEA::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    d.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(d,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal IDEA_Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = CryptoPP::IDEA::DEFAULT_KEYLENGTH;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::IDEA>::Encryption e;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::IDEA::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::IDEA::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    e.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(e,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+
+IMPALA_UDF_EXPORT
+StringVal SkipjackDecrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = CryptoPP::SKIPJACK::DEFAULT_KEYLENGTH;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::SKIPJACK>::Decryption d;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::SKIPJACK::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::SKIPJACK::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    d.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(d,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal SkipjackEncrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = CryptoPP::SKIPJACK::DEFAULT_KEYLENGTH;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::SKIPJACK>::Encryption e;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::SKIPJACK::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::SKIPJACK::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    e.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(e,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+
+IMPALA_UDF_EXPORT
+StringVal TEA_Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = CryptoPP::TEA::DEFAULT_KEYLENGTH;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::TEA>::Decryption d;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::TEA::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::TEA::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    d.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(d,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal TEA_Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = CryptoPP::TEA::DEFAULT_KEYLENGTH;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::TEA>::Encryption e;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::TEA::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::TEA::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    e.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(e,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal XTEA_Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = CryptoPP::XTEA::DEFAULT_KEYLENGTH;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::XTEA>::Decryption d;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::XTEA::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::XTEA::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    d.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(d,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal XTEA_Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = CryptoPP::XTEA::DEFAULT_KEYLENGTH;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::XTEA>::Encryption e;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::XTEA::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::XTEA::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    e.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(e,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal SM4Decrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = CryptoPP::SM4::DEFAULT_KEYLENGTH;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::SM4>::Decryption d;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::SM4::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::SM4::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    d.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(d,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
+}
+
+IMPALA_UDF_EXPORT
+StringVal SM4Encrypt(FunctionContext* context, const StringVal& arg1,
+    const StringVal& arg2) {
+  int keySize = CryptoPP::SM4::DEFAULT_KEYLENGTH;
+  // return null for empty string
+  if (arg1.is_null || arg2.is_null || arg2.len > keySize) {
+    return StringVal::null();
+  }
+  if (arg1.len == 0) {
+    return StringVal();
+  }
+
+  std::string result_str;
+  try {
+    CryptoPP::CBC_Mode<CryptoPP::SM4>::Encryption e;
+    CryptoPP::byte key[keySize];
+    CryptoPP::byte iv[CryptoPP::SM4::BLOCKSIZE];
+    memset(key, 0x00, keySize);
+    memset(iv, 0x00, CryptoPP::SM4::BLOCKSIZE);
+    for (int i = 0; i < arg2.len; ++i) key[i % keySize] ^= arg2.ptr[i];
+    e.SetKeyWithIV(key, sizeof(key), iv);
+    std::string input(reinterpret_cast<char*>(arg1.ptr), arg1.len);
+    // The StreamTransformationFilter removes
+    //  padding as required.
+    CryptoPP::StringSource s(input, true, 
+      new CryptoPP::StreamTransformationFilter(e,
+        new CryptoPP::StringSink(result_str)
+      ) // StreamTransformationFilter
+    ); // StringSource
+  } catch (const CryptoPP::Exception& e) {
+    context->AddWarning(e.what());
+    return StringVal::null();
+  }
+  return StringVal::CopyFrom(context, 
+    reinterpret_cast<const uint8_t*>(result_str.c_str()), result_str.size());
 }
