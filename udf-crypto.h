@@ -27,6 +27,12 @@ StringVal SHA1(FunctionContext* context, const StringVal& arg1);
 
 StringVal MD5(FunctionContext* context, const StringVal& arg1);
 
+StringVal MD2(FunctionContext* context, const StringVal& arg1);
+
+StringVal MD4(FunctionContext* context, const StringVal& arg1);
+
+StringVal PanamaHash(FunctionContext* context, const StringVal& arg1);
+
 StringVal SHA224(FunctionContext* context, const StringVal& arg1);
 
 StringVal SHA256(FunctionContext* context, const StringVal& arg1);
@@ -106,6 +112,56 @@ StringVal TDEA2Encrypt(FunctionContext* context, const StringVal& arg1, const St
 StringVal TDEA3Decrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
 
 StringVal TDEA3Encrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+// Params: arg1 is cipher text, arg2 is key, return value is plain text
+StringVal DES_Decrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+// Params: arg1 is plain text, arg2 is key, return value is cipher text
+StringVal DES_Encrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+// Params: arg1 is cipher text, arg2 is key, return value is plain text
+StringVal DES_XEX3_Decrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+// Params: arg1 is plain text, arg2 is key, return value is cipher text
+StringVal DES_XEX3_Encrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+// Params: arg1 is cipher text, arg2 is key, return value is plain text
+StringVal RC2Decrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+// Params: arg1 is plain text, arg2 is key, return value is cipher text
+StringVal RC2Encrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+// Params: arg1 is cipher text, arg2 is key, return value is plain text
+StringVal SAFER_K64Decrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+// Params: arg1 is plain text, arg2 is key, return value is cipher text
+StringVal SAFER_K64Encrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+StringVal SAFER_K128Decrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+StringVal SAFER_K128Encrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+// Params: arg1 is cipher text, arg2 is key, return value is plain text
+StringVal SAFER_SK64Decrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+// Params: arg1 is plain text, arg2 is key, return value is cipher text
+StringVal SAFER_SK64Encrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+StringVal SAFER_SK128Decrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+StringVal SAFER_SK128Encrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+// Params: arg1 is cipher text, arg2 is key, return value is plain text
+StringVal ThreeWayDecrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+// Params: arg1 is plain text, arg2 is key, return value is cipher text
+StringVal ThreeWayEncrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+// Params: arg1 is cipher text, arg2 is key, return value is plain text
+StringVal GOST_Decrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
+
+// Params: arg1 is plain text, arg2 is key, return value is cipher text
+StringVal GOST_Encrypt(FunctionContext* context, const StringVal& arg1, const StringVal& arg2);
 
 
 // Params: arg1 is cipher text, arg2 is key, return value is plain text

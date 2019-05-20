@@ -34,6 +34,15 @@ int main(int argc, char** argv) {
       MD5, StringVal("1"), StringVal("C4CA4238A0B923820DCC509A6F75849B"));
   
   passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal>(
+      MD2, StringVal("1"), StringVal("C92C0BABDC764D8674BCEA14A55D867D"));
+  
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal>(
+      MD4, StringVal("1"), StringVal("8BE1EC697B14AD3A53B371436120641D"));
+  
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal>(
+      PanamaHash, StringVal("1"), StringVal("B345994CD53C82F66F2FEF1263BE1EEF4FAF05BCCDE359254B80D9D83DB0E636"));
+  
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal>(
       SHA224, StringVal("1"), StringVal("E25388FDE8290DC286A6164FA2D97E551B53498DCBF7BC378EB1F178"));
   
   passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal>(
@@ -165,6 +174,90 @@ int main(int argc, char** argv) {
       TDEA3Encrypt, StringVal("ABC"), StringVal("123456789012345678901234"), StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 64 / 8));
   passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
       TDEA3Decrypt, StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 64 / 8), StringVal("123456789012345678901234"), StringVal("ABC"));
+  
+  encoded = "73946adb1af08fd6";
+  decoded = "";
+  CryptoPP::StringSource(encoded, true,
+    new CryptoPP::HexDecoder(
+        new CryptoPP::StringSink(decoded)
+    ) // HexDecoder
+  ); // StringSource
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
+      DES_Encrypt, StringVal("ABC"), StringVal("12345678"), StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 64 / 8));
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
+      DES_Decrypt, StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 64 / 8), StringVal("12345678"), StringVal("ABC"));
+  
+  encoded = "FA61F12A87109824";
+  decoded = "";
+  CryptoPP::StringSource(encoded, true,
+    new CryptoPP::HexDecoder(
+        new CryptoPP::StringSink(decoded)
+    ) // HexDecoder
+  ); // StringSource
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
+      DES_XEX3_Encrypt, StringVal("ABC"), StringVal("123456789012345678901234"), StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 64 / 8));
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
+      DES_XEX3_Decrypt, StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 64 / 8), StringVal("123456789012345678901234"), StringVal("ABC"));
+  
+  encoded = "10FE90E9DFE05F29";
+  decoded = "";
+  CryptoPP::StringSource(encoded, true,
+    new CryptoPP::HexDecoder(
+        new CryptoPP::StringSink(decoded)
+    ) // HexDecoder
+  ); // StringSource
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
+      RC2Encrypt, StringVal("ABC"), StringVal("1234567890123456789012345"), StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 64 / 8));
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
+      RC2Decrypt, StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 64 / 8), StringVal("1234567890123456789012345"), StringVal("ABC"));
+  
+  encoded = "B0EDC0DB2A279B39";
+  decoded = "";
+  CryptoPP::StringSource(encoded, true,
+    new CryptoPP::HexDecoder(
+        new CryptoPP::StringSink(decoded)
+    ) // HexDecoder
+  ); // StringSource
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
+      SAFER_K128Encrypt, StringVal("ABC"), StringVal("1234567890123456"), StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 64 / 8));
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
+      SAFER_K128Decrypt, StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 64 / 8), StringVal("1234567890123456"), StringVal("ABC"));
+  
+  encoded = "7FF571CD2379455D";
+  decoded = "";
+  CryptoPP::StringSource(encoded, true,
+    new CryptoPP::HexDecoder(
+        new CryptoPP::StringSink(decoded)
+    ) // HexDecoder
+  ); // StringSource
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
+      SAFER_SK128Encrypt, StringVal("ABC"), StringVal("1234567890123456"), StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 64 / 8));
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
+      SAFER_SK128Decrypt, StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 64 / 8), StringVal("1234567890123456"), StringVal("ABC"));
+  
+  encoded = "81A4228FAC069C01A0426660";
+  decoded = "";
+  CryptoPP::StringSource(encoded, true,
+    new CryptoPP::HexDecoder(
+        new CryptoPP::StringSink(decoded)
+    ) // HexDecoder
+  ); // StringSource
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
+      ThreeWayEncrypt, StringVal("ABC"), StringVal("123456789012"), StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 96 / 8));
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
+      ThreeWayDecrypt, StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 96 / 8), StringVal("123456789012"), StringVal("ABC"));
+  
+  encoded = "24EF947A53722315";
+  decoded = "";
+  CryptoPP::StringSource(encoded, true,
+    new CryptoPP::HexDecoder(
+        new CryptoPP::StringSink(decoded)
+    ) // HexDecoder
+  ); // StringSource
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
+      GOST_Encrypt, StringVal("ABC"), StringVal("12345678901234567890123456789012"), StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 64 / 8));
+  passed &= UdfTestHarness::ValidateUdf<StringVal, StringVal, StringVal>(
+      GOST_Decrypt, StringVal(reinterpret_cast<uint8_t*>(&decoded[0]), 64 / 8), StringVal("12345678901234567890123456789012"), StringVal("ABC"));
   
   encoded = "811151160c7c0e84";
   decoded = "";
