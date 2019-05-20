@@ -26,6 +26,8 @@ select blake2b256('scalefree.com') = '40091487DD2B10AAE4EB296DC9F4BCBF7F55AB1A8E
 select blake2b384('scalefree.com') = '67C8F429776DB801CD87A900EDADF72E9CDF36F5B5B091271CCB93038B92996FA6E9993EA48E6D3E340681C85A5E854C';
 select blake2b512('scalefree.com') = '1FFDF955D51F5C279820712E8AC1B764807EC83BBFA2E1853E493D2718FDD4AD3CE2470B14B1426881EEDA46F182FE1D4708B56DEAE971C7D250E251BBD07C64';
 
+select panamahash('scalefree.com') = '5428620B45A7D2D8B5842337AB76BAF070136DB5D37E20AAA5C9D4E651E3EBE2';
+
 select hex(aes128encrypt('scalefree.com', 'secret')) = 'BD1C60B01C7474BE1AE5433A619FE07B';
 select aes128decrypt(unhex('BD1C60B01C7474BE1AE5433A619FE07B'), 'secret') = 'scalefree.com';
 select hex(aes192encrypt('scalefree.com', 'secret')) = 'FFF9F1CF96925BD503CDC8424F4887F1';
@@ -80,10 +82,32 @@ select xtea_decrypt(unhex('02BF81B38A76B0E8CD98DEF3B1998E4B'), 'secret') = 'scal
 select hex(sm4encrypt('scalefree.com', 'secret')) = '66CDE637DBB64DBED5AEDAE2C1B95ED8';
 select sm4decrypt(unhex('66CDE637DBB64DBED5AEDAE2C1B95ED8'), 'secret') = 'scalefree.com';
 
---select hex(xxxxxxxxxxxx('scalefree.com', 'secret')) = 'BD1C60B01C7474BE1AE5433A619FE07B';
---select xxxxxxxxxxxx(unhex('BD1C60B01C7474BE1AE5433A619FE07B'), 'secret') = 'scalefree.com';
 
 
+select hex(des_encrypt('scalefree.com', 'secret')) = 'A6B22B80FE80F4508B1007FEA03D925D';
+select des_decrypt(unhex('A6B22B80FE80F4508B1007FEA03D925D'), 'secret') = 'scalefree.com';
+select hex(des_xex3_encrypt('scalefree.com', 'secret')) = '4C6893BB12AB7CBD4641F62D1DA38D1F';
+select des_xex3_decrypt(unhex('4C6893BB12AB7CBD4641F62D1DA38D1F'), 'secret') = 'scalefree.com';
+select hex(des_xex3_encrypt('scalefree.com', 'secret')) = '4C6893BB12AB7CBD4641F62D1DA38D1F';
+select des_xex3_decrypt(unhex('4C6893BB12AB7CBD4641F62D1DA38D1F'), 'secret') = 'scalefree.com';
+
+select hex(rc2_encrypt('scalefree.com', 'secret')) = '3B47194CDDB0EC18C4EB2822D0A772E2';
+select rc2_decrypt(unhex('3B47194CDDB0EC18C4EB2822D0A772E2'), 'secret') = 'scalefree.com';
+
+select hex(safer_k64_encrypt('scalefree.com', 'secret')) = 'B3E0413F32E5060B311AFD5219D463A3';
+select safer_k64_decrypt(unhex('B3E0413F32E5060B311AFD5219D463A3'), 'secret') = 'scalefree.com';
+select hex(safer_k128_encrypt('scalefree.com', 'secret')) = '52C59B37679C92473A770FD8D6923716';
+select safer_k128_decrypt(unhex('52C59B37679C92473A770FD8D6923716'), 'secret') = 'scalefree.com';
+select hex(safer_sk64_encrypt('scalefree.com', 'secret')) = '87AA1F13632B5E5C4656DB6705628A5E';
+select safer_sk64_decrypt(unhex('87AA1F13632B5E5C4656DB6705628A5E'), 'secret') = 'scalefree.com';
+select hex(safer_sk128_encrypt('scalefree.com', 'secret')) = '051632FF55A12341420ED3321E12ACBB';
+select safer_sk128_decrypt(unhex('051632FF55A12341420ED3321E12ACBB'), 'secret') = 'scalefree.com';
+
+select hex(threeway_encrypt('scalefree.com', 'secret')) = '57DDEAE4502CAE951006E09532E30BFAE4755C7D29DC3999';
+select threeway_decrypt(unhex('57DDEAE4502CAE951006E09532E30BFAE4755C7D29DC3999'), 'secret') = 'scalefree.com';
+
+select hex(gost_encrypt('scalefree.com', 'secret')) = '76560D85D5FAF4D16F2284E5925C1402';
+select gost_decrypt(unhex('76560D85D5FAF4D16F2284E5925C1402'), 'secret') = 'scalefree.com';
 
 
 
