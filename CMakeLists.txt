@@ -50,8 +50,8 @@ if (CLANG_EXECUTABLE)
 endif(CLANG_EXECUTABLE)
 
 # This is an example of how to use the test harness to help develop UDF and UDAs.
-target_link_libraries(udfsample ImpalaUdf)
-target_link_libraries(udasample ImpalaUdf)
+target_link_libraries(udfsample ImpalaUdf-retail)
+target_link_libraries(udasample ImpalaUdf-retail)
 add_executable(udf-sample-test udf-sample-test.cc)
 target_link_libraries(udf-sample-test udfsample)
 add_executable(uda-sample-test uda-sample-test.cc)

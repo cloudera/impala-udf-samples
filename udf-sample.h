@@ -68,4 +68,25 @@ void ReturnConstantArgPrepare(
 void ReturnConstantArgClose(
     FunctionContext* context, FunctionContext::FunctionStateScope scope);
 
+// Sentiment Analysis udf.
+// Requires Impala 4.5.0 or higher.
+// Usage: > create function classify_reviews_default(string) returns string
+//          location 's3a://datalake-bucket/udf/libudfsample.so'
+//          symbol='ClassifyReviewsDefault';
+//        > select customer_id, star_rating,
+//          classify_reviews_default(review_body) AS review_analysis, review_body
+//          from amazon_book_reviews
+//          where product_title='Artificial Superintelligence'
+//          order by star_rating;
+StringVal ClassifyReviewsDefault(FunctionContext* context, const StringVal& input);
+// Usage: > create function classify_reviews(string) returns string
+//          location 's3a://datalake-bucket/udf/libudfsample.so'
+//          symbol='ClassifyReviews';
+//        > select customer_id, star_rating,
+//          classify_reviews(review_body) AS review_analysis, review_body
+//          from amazon_book_reviews
+//          where product_title='Artificial Superintelligence'
+//          order by star_rating;
+StringVal ClassifyReviews(FunctionContext* context, const StringVal& input);
+
 #endif
